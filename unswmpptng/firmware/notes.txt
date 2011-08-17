@@ -1,0 +1,6 @@
+MPPTNG timing:
+
+frequency: 24.04kHz
+aux pulse: 1.320 us
+overlap: 200 ns 
+
