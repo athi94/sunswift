@@ -1,0 +1,12 @@
+UNSWMPPTNG control board. 
+-=-=-=-
+
+This is a release of the UNSW Solar Racing Team's firmware, CPLD code and hardware designs. This board has been used as part of the UNSW solar racing team's solar cars since the 2005 World Solar Challenge, having gradually been improved over those years. 
+
+It was developed by David Snowdon <scandal@snowdon.id.au> based on code written by Robert Reid and Andreas Gotterba, with a contribution by Glen Summers. 
+
+This project is under the GPL v3. Please see the COPYING file in the top level directory for further details. 
+
+For further details, see the project page at <http://code.google.com/p/unswmpptng/>
+
+
