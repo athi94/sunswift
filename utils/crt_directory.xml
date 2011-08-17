@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="crt_directory.xslt"?>
+<?debugstack-directory version="1.0"?>
+<!DOCTYPE directory SYSTEM "crt_directory.dtd" >
+<directory xmlns:xi="http://www.w3.org/2001/XInclude">
+	<xi:include href="?LMI_dir_part.xml" /> 
+	<xi:include href="?LMI_dir_part_firestorm.xml" /> 
+	<xi:include href="?NXP_dir_part_LPC11.xml" /> 
+	<xi:include href="?NXP_dir_part_LPC12.xml" /> 
+	<xi:include href="?NXP_dir_part_LPC13.xml" /> 
+	<xi:include href="?NXP_dir_part_LPC17.xml" /> 
+	<xi:include href="?NXP_dir_part_LPC2x.xml" /> 
+	<xi:include href="?NXP_dir_part_LPC29.xml" /> 
+	<xi:include href="?NXP_dir_part_LPC31.xml" /> 
+	<xi:include href="?NXP_dir_part_LPC32.xml" /> 
+	<xi:include href="?ARM_dir_part.xml" /> 
+</directory>
