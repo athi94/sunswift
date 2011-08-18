@@ -2,7 +2,7 @@
  * main.h
  *
  *  Created on: Feb 10, 2011
- *      Author: Charith
+ *      Author: charith
  */
 
 #ifndef MAIN_H_
