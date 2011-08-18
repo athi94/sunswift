@@ -23,10 +23,10 @@
 /*	Progress on editing (Porting of SCANDAL)
  * 		-Sending data:
  * 			-Sending packet of SCANDAL format with timestamp (working 13 Aug 2011)
- * 			-Buffering of TX messages in the message objects (Using MSG OBJ 21-32)
+ * 			-Buffering of TX messages in the message objects (Using MSG OBJ 21-32) (written, need to test)
  *
  * 		-Receiving data:
- * 			-Basic interrupt based receiving (working)
+ * 			-Basic interrupt based receiving (was in CMSIS)
  * 			-Conversion of received data into SCANDAL format and handling this externally (depending on each users needs)
  * 			-Receiving timestamps and syncing the clock
  *
@@ -34,6 +34,8 @@
  * 			-Initialisation routine	(written, need to test)
  * 			-Setting the initialisation parameters from an external function (that each user writes depending on their needs)
  *
+ *			Idea - Combine ProcessReceived and CAN_MsgConfigParam to make it easier to see whats happening where
+ *							It could also be used to initialise static variables!!!
  */
 #include "driver_config.h"
 #if CONFIG_ENABLE_DRIVER_CAN==1
@@ -57,6 +59,58 @@ int32_t SCANDALClockOffset=0;
 uint32_t CANStatusLog[100];
 uint32_t CANStatusLogCount = 0;
 #endif
+
+void FetchData(uint8_t MsgNum, int32_t *DataPointer, uint32_t *TimePointer){
+
+		*DataPointer=(can_buff[MsgNum].data[0]<<16) | (can_buff[MsgNum].data[1]);
+		*TimePointer=(can_buff[MsgNum].data[2]<<16) | (can_buff[MsgNum].data[3]);
+		CANRxDone[msg_no] = 0;
+}
+
+void FetchHeaders(uint8_t MsgNum, uint16_t *Pri, uint16_t *MsgType, uint16_t *NodAddr, uint16_t *Chnl_NodTyp){
+
+		//(Pri << 26) (Len=3) | ( MsgType << 18) (Len=8) | (NodAddr << 10) (Len=8) | Chnl_NodTyp (Len=10)
+		*Chnl_NodTyp=((can_buff[MsgNum].id >> 0)& 0x03FF);
+		*NodAddr=((can_buff[MsgNum].id >> 10)& 0x00FF);
+		*MsgType=((can_buff[MsgNum].id >> 18)& 0x00FF);
+		*Pri=((can_buff[MsgNum].id >> 26)& 0x0007);
+		CANRxDone[msg_no] = 0;
+}
+
+void ProcessReceived(uint8_t MsgNum){
+		int32_t DataHold=0;
+		uint32_t TimeHold=0;
+
+	switch(MsgNum){
+		case 0: //Timesync
+			*filtermask = (MASK_TYPE | MASK_ADDR | MASK_CHNL);
+			*filteraddr = FLT_TYPE_NONE;
+			*eob = 1;
+			break;
+
+		case 1: //Velocity, google about redeclaring static variables
+				FetchData(MsgNum, &DataHold, &TimeHold);
+
+				Acc_DiffV=DataHold-Acc_LastV;
+				Acc_DiffT=TimeHold-Acc_LastT;
+				
+				if((Acc_DiffT>0) && (Acc_DiffT < 2000)){
+						Acceleration = (float) DiffV / (((float) 3.6) * ((float) Acc_DiffT))
+				}
+
+				Acc_LastT=TimeHold;
+				Acc_LastV=DataHold;
+
+			break;
+
+		default:
+			*filtermask= (MASK_PRIO | MASK_TYPE | MASK_ADDR | MASK_CHNL);
+			*filteraddr = FLT_TYPE_NONE;
+			*eob = 1;
+			break;
+		}
+
+}
 
 /*****************************************************************************
 ** Function name:		CAN_CustomConfigureMessages
@@ -87,7 +141,8 @@ void CAN_CustomConfigureMessages( void )
   for ( i = 0; i < MSG_OBJ_MAX; i++ )
   {
 	  CAN_MsgConfigParam(i, &eob, &filtermask, &filteraddr); //Fetches the mask and the address to store in the CAN message object
-	  LPC_CAN->IF1_CMDMSK = WR|MASK|ARB|CTRL|DATAA|DATAB; //Configuring (Writing to) the message objects
+	  
+		LPC_CAN->IF1_CMDMSK = WR|MASK|ARB|CTRL|DATAA|DATAB; //Configuring (Writing to) the message objects
 
 	  /* Mxtd: 1, Mdir: 0, Mask is 0x1FFFFFFF */
 	  LPC_CAN->IF1_MSK1 = filtermask & 0xFFFF; //Filtermask used to be ID_EXT_MASK
@@ -134,18 +189,23 @@ void CAN_MsgConfigParam(uint8_t msg_no, uint8_t *eob, uint32_t *filtermask, uint
 	//(Ext << 30) | (Pri << 26) | ( MsgType << 18) | (NodAddr << 10) | NodTyp
 	//Ext will not be needed for sending (I THINK) so testing without it
 
-	//*filteraddr format: ( << 26) | ( << 18) | ( << 10) | CHNL
+	//*filteraddr format: SCANDAL_AddrGen(Priority,MsgType,NodeAddress,Channel/NodeType);
+  //		Priority ranges from 0 to 7 with lower numbers representing a greater priority message
+	//		MsgType differentiates between Channel messages, Config, Heartbeat, Error and reset messages
+	//		NodeAddress is the address of the CAN node you're interested in
+	//		Channel/NodeType is the channel the node is sending messages for channel messages
+	//				for heartbeats, it represents the NodeType, as defined in scandal_devices.h
 
 	switch(msg_no){
 		case 0: //Timesync
 			*filtermask = (MASK_TYPE | MASK_ADDR | MASK_CHNL);
-			*filteraddr = 0;
+			*filteraddr = FLT_TYPE_NONE;
 			*eob = 1;
 			break;
 
 		case 1: //Velocity
 			*filtermask = (MASK_TYPE | MASK_ADDR | MASK_CHNL);
-			*filteraddr = 0;
+			*filteraddr = SCANDAL_AddrGen(7, 0, 20, 6);
 			*eob = 1;
 			break;
 
@@ -277,8 +337,9 @@ void CAN_IRQHandler(void)
 		if ( (msg_no >= 0x01) && (msg_no <= 0x20) )
 		{
 		  LPC_CAN->STAT &= ~STAT_RXOK;
-		  CAN_MessageProcess( msg_no-1 );
+		  CAN_MessageProcess( msg_no-1 ); //msg_no goes up from 1, msg_no ranges from 0
 		  CANRxDone[msg_no-1] = TRUE;
+			//ProcessReceived(msg_no-1);
 		}
 	  }
 	}
@@ -671,9 +732,16 @@ void SCANDAL_Send(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t Cha
 
 }
 
-uint32_t SCANDAL_AddrGen(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t NodTyp){
+	//*filteraddr format: SCANDAL_AddrGen(Priority,MsgType,NodeAddress,Channel/NodeType);
+  //		Priority ranges from 0 to 7 with lower numbers representing a greater priority message
+	//		MsgType differentiates between Channel messages, Config, Heartbeat, Error and reset messages
+	//		NodeAddress is the address of the CAN node you're interested in
+	//		Channel/NodeType is the channel the node is sending messages for channel messages
+	//				for heartbeats, it represents the NodeType, as defined in scandal_devices.h
 
-	return (Pri << 26) | ( MsgType << 18) | (NodAddr << 10) | NodTyp;
+uint32_t SCANDAL_AddrGen(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t Chnl_NodTyp){
+
+	return (Pri << 26) | ( MsgType << 18) | (NodAddr << 10) | Chnl_NodTyp;
 	//(Ext << 30) | Will be re-written such that this isn't required
 }
 
