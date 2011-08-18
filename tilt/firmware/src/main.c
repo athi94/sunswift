@@ -58,6 +58,11 @@ extern volatile uint8_t UARTBuffer[BUFSIZE];
 	extern message_object can_buff[MSG_OBJ_MAX];
 	extern uint32_t CANRxDone[MSG_OBJ_MAX];
 #endif
+volatile float Acceleration=0; //To store the acceleration of the car for subtraction by the accelerometer
+volatile int32_t Acc_DiffV=0;
+volatile int32_t Acc_LastV=0;
+volatile uint32_t Acc_DiffT=0;
+volatile uint32_t Acc_LastT=0;
 /*******************************************************************************
 **   Main Function  main()
 *******************************************************************************/
