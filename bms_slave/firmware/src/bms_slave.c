@@ -31,28 +31,31 @@
 #include "gpio.h"
 #include "uart.h"
 #include "adc.h"
+//#include "scandal.h"
 
 
 //structural overview
 //
 //functions 
 //--check id, initialise
-//--read-voltage, read-temp, calibrate?
+//--read-voltage, read-temp, calibrate
 //receive comms
 //send comms
 //balance
 //timer??
 
+#define DEBUG TRUE
 
 int main (void)
 {
-	int i = 0, on=0, ID;
+	int i = 0, on=0, ID, calb;
   
   
   int voltage = 0;
-  ID = readID();
   
   init();
+  ID = readID();
+  calb = readCalibration();
 
   while (1)                                /* Loop forever */
   {
@@ -85,30 +88,54 @@ int main (void)
 
 int readVoltage(void) {
 	//enable voltage sense mosfet
-	//wait
+	GPIOSetValue(VOLT_SENSE_EN_PORT, VOLT_SENSE_EN_PIN, ON);
+	//wait?
 	//read voltage
+	ADCRead(ADC_VOLT);
 	//disable voltage sense mosfet
+	GPIOSetValue(VOLT_SENSE_EN_PORT, VOLT_SENSE_EN_PIN, OFF);
+	
+	return ADCValue[ADC_VOLT];	//error checking?
 }
 
 int readTemperature(void) {
-	//enable temp sense mosfet
-	//wait
-	//read temp
-	//disable temp sense mosfet
+	//enable voltage sense mosfet
+	GPIOSetValue(TEMP_SENSE_EN_PORT, TEMP_SENSE_EN_PIN, ON);
+	//wait?
+	//read voltage
+	ADCRead(ADC_TEMP);
+	//disable voltage sense mosfet
+	GPIOSetValue(TEMP_SENSE_EN_PORT, TEMP_SENSE_EN_PIN, OFF);
+	
+	return ADCValue[ADC_TEMP];	//error checking?
 }
 
-int discharge(int time) {
+int readCalibration(void) {
+	ADCRead(ADC_CALB);
+	return ADCValue[ADC_CALB];
+}
+
+//discharge mode = time || voltage, argument = time (s) || voltage (Volts)
+int discharge(int argument, int mode) { 
 	//start discharger
 	//set timer interrupt
 	//stop discharge
-
+	GPIOSetValue(DISCHARGE_PORT, DISCHARGE_PIN, ON);
+	//delay for time, or perhaps should specify a voltage to discharge to?
+	GPIOSetValue(DISCHARGE_PORT, DISCHARGE_PIN, OFF);
+	
 }
 
 int readID(void) {
-    //determine ID based on 6 GPIO pins
+    //determine ID based on 6 GPIO pins, is it possible to use the unique micro ID
     int ID = 0;
-    
-    
+ /*   ID |= (gpioGetValue(ID_PORT, ID0_PIN));
+    ID |= (gpioGetValue(ID_PORT, ID1_PIN)<<1);
+    ID |= (gpioGetValue(ID_PORT, ID2_PIN)<<2);
+    ID |= (gpioGetValue(ID_PORT, ID3_PIN)<<3);
+    ID |= (gpioGetValue(ID_PORT, ID4_PIN)<<4);
+    ID |= (gpioGetValue(ID_PORT, ID5_PIN)<<5);
+ */   
 }
 
 void burstmode(int mode) {
@@ -134,32 +161,9 @@ int init(void)
 	GPIOSetDir(RED_LED_PORT, RED_LED_PIN, OUTPUT);
 	GPIOSetDir(WAKEUP_PORT, WAKEUP_PIN, INPUT);
 	
-  //Set output and input GPIOs
-  //GPIOSetDir
-//
-//1.5  -burstmode
-//0.3 CAN_en
-//0.6 Discharge
-//0.7 Volt sense en
-//3.0 Temp sense en
-
-//2.0 ID0
-//2.1 ID1
-//2.2 ID2
-//2.3 ID3
-//2.4 ID4
-//2.5 ID5
-
-//2.10 Orange LED
-//2.11 Red LED
-
-//ADC5/Wakeup - 1.4 - wakeup
-//ADC0 - 0.11 - voltage
-//ADC1 - 1.0 - temp
-
-
-   ADCInit(1);
-   GPIOSetDir( LED_PORT, LED_BIT, 1 );
+  
+	ADCInit(1);
+	GPIOSetDir( LED_PORT, LED_BIT, 1 );
  
    
    /* Basic chip initialization is taken care of in SystemInit() called
@@ -169,17 +173,17 @@ int init(void)
 
   /* Initialize 32-bit timer 0. TIME_INTERVAL is defined as 10mS */
   /* You may also want to use the Cortex SysTick timer to do this */
-  init_timer32(0, TIME_INTERVAL);
+	init_timer32(0, TIME_INTERVAL);
   /* Enable timer 0. Our interrupt handler will begin incrementing
    * the TimeTick global each time timer 0 matches and resets.
    */
 	
-  UARTInit(9600);
-  enable_timer32(0);
+	UARTInit(9600);
+	enable_timer32(0);
 
 
   /* Initialize GPIO (sets up clock) */
-  GPIOInit();
+	GPIOInit();
   /* Set LED port pin to output */
   
    

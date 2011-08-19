@@ -42,6 +42,9 @@ void GPIOSetValue( uint32_t portNum, uint32_t bitPosi, uint32_t bitVal );
 void GPIOSetDir( uint32_t portNum, uint32_t bitPosi, uint32_t dir );
 #endif
 #endif /* end __GPIO_H */
+
+
+
 /*****************************************************************************
 **                            End Of File
 ******************************************************************************/
