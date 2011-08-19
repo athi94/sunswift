@@ -1,0 +1,11 @@
+K 25
+svn:wc:ra_dav:version-url
+V 107
+/repos/svn/!svn/ver/56/software/arch/lpc1768env/LPC1700CMSIS/Core/CM3/DeviceSupport/NXP/LPC17xx/startup/iar
+END
+startup_LPC17xx.s
+K 25
+svn:wc:ra_dav:version-url
+V 125
+/repos/svn/!svn/ver/56/software/arch/lpc1768env/LPC1700CMSIS/Core/CM3/DeviceSupport/NXP/LPC17xx/startup/iar/startup_LPC17xx.s
+END
