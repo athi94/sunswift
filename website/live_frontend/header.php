@@ -25,7 +25,7 @@
 	if ( $paged >= 2 || $page >= 2 )
 		echo ' | ' . sprintf( __( 'Page %s', 'sunswift' ), max( $paged, $page ) );
 	?></title>
-<link rel="stylesheet" href="wp-content/themes/sunswift/style.css" type="text/css" media="screen" title="no title" charset="utf-8">
+<link rel="stylesheet" href="/wp-content/themes/sunswift/style.css" type="text/css" media="screen" title="no title" charset="utf-8">
 <!--[if IE]>
 <link rel="stylesheet" type="text/css" media="all" href="/wp-content/themes/sunswift/styles/style-ie.css" />
 <![endif]-->
