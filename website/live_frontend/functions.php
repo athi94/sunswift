@@ -11,7 +11,7 @@ add_action( 'after_setup_theme', 'sunswift_setup' );
 if ( ! function_exists( 'sunswift_setup' ) ):
 
 function sunswift_setup () {
-	define('PATHPREFIX', 'wp-content/themes/sunswift/');
+	define('PATHPREFIX', '/wp-content/themes/sunswift/');
 	
 	define( 'LOGO_IMAGE', PATHPREFIX.'/images/logo.png' );	// TODO: Not hardcoded
 	define( 'SCRIPTSPATH', PATHPREFIX.'js');

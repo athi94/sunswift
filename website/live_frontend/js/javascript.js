@@ -9,7 +9,7 @@ var REALTIME = 'Replay'			// Options: Realtime, Socket, Replay
 var LIVEDURATION = 2000;
 var ROUND = 100;
 var MAPTYPE = 'Maps';				// Options: Earth, Maps
-var PATHPREFIX = 'wp-content/themes/sunswift/';
+var PATHPREFIX = '/wp-content/themes/sunswift';
 var MAXARRAY = 1300;
 var BATCHLENGTH = 60;
 var dataTypes = [
@@ -771,7 +771,7 @@ function addPhotoToMap () {
 		animation: google.maps.Animation.DROP,
 		title:'Photo',
 		icon:PATHPREFIX+"/images/photoicon.png",
-		html:"<div class='map_tweet'><a title='' target='_blank' href='/"+PATHPREFIX+"images/live/"+allData[curkey]["photo"]+"'><img src='/"+PATHPREFIX+"images/live/"+allData[curkey]["photo"]+"' height='229px' width='344px' /></a></div>"
+		html:"<div class='map_tweet'><a title='' target='_blank' href='/"+PATHPREFIX+"/images/live/"+allData[curkey]["photo"]+"'><img src='/"+PATHPREFIX+"/images/live/"+allData[curkey]["photo"]+"' height='229px' width='344px' /></a></div>"
 	});
 	photomarker.setMap(map);
 	photoinfo = new google.maps.InfoWindow();
