@@ -1,0 +1,6 @@
+syntax: glob
+
+*Preview
+*htm
+*History
+.DS_Store
