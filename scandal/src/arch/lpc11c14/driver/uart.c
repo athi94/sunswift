@@ -8,9 +8,9 @@
  *   2009.12.07  ver 1.00    Preliminary version, first Release
  *
 ******************************************************************************/
-#include "driver_config.h"
+#include "../include/driver_config.h"
 #if CONFIG_ENABLE_DRIVER_UART==1
-#include "uart.h"
+#include <arch/uart.h>
 
 volatile uint32_t UARTStatus;
 volatile uint8_t  UARTTxEmpty = 1;

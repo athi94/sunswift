@@ -107,7 +107,7 @@ typedef enum IRQn
 
 
 #include "core_cm0.h"                       /* Cortex-M0 processor and core peripherals           */
-#include "system_LPC11xx.h"                 /* System Header                                      */
+#include <system_LPC11xx.h>                 /* System Header                                      */
 
 
 /******************************************************************************/

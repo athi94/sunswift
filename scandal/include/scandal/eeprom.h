@@ -27,9 +27,9 @@
 #ifndef __SCANDAL_EEPROM__
 #define __SCANDAL_EEPROM__
 
-#include "types.h"
-#include "config.h"
-#include "engine.h"
+#include <scandal/types.h>
+#include <scandal/engine.h>
+#include <project/config.h>
 
 #define SIZEOF_SCANDAL_CONFIG  ((NUM_IN_CHANNELS * SIZEOF_IN_CHAN_CONFIG) + \
 				(NUM_OUT_CHANNELS * SIZEOF_OUT_CHAN_CONFIG) + \
