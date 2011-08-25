@@ -30,8 +30,9 @@
 #include <scandal/utils.h>
 #include <scandal/maths.h>
 #include <scandal/error.h>
-#include <scandal/config.h>
 #include <scandal/message.h>
+
+#include <project/scandal_config.h>
 
 u08 scandal_integrate_trapz32(s32 *integral, s32 *timediff, s32 *old_val, s32 *pres_val, s32  *scaling)
 {
@@ -55,67 +56,52 @@ u08 scandal_get_scaled_value(u16 chan_num, s32 *value){
 }
 
 u08 scandal_get_unscaled_value(u16 chan_num, s32 *value){
-  *value <<= B32_SCALING_BITS; 
-  *value -= scandal_get_b(chan_num);
-  *value /= scandal_get_m(chan_num); 
-  *value <<= M32_SCALING_BITS - B32_SCALING_BITS; 
-  return NO_ERR; 
+	*value <<= B32_SCALING_BITS; 
+	*value -= scandal_get_b(chan_num);
+	*value /= scandal_get_m(chan_num); 
+	*value <<= M32_SCALING_BITS - B32_SCALING_BITS; 
+	return NO_ERR; 
 }
 
 u08 scandal_send_scaled_channel(u08 pri, u16 chan_num, s32 value){
-  scandal_get_scaled_value(chan_num, &value);
-  return(scandal_send_channel(pri, chan_num, value)); 
+	scandal_get_scaled_value(chan_num, &value);
+	return(scandal_send_channel(pri, chan_num, value)); 
 }
 
 u08 scandal_get_scaleaverage(u16 chan_num, s32 *sum, s32 *n){
-  *sum *= scandal_get_m(chan_num);
-  *n <<= M32_SCALING_BITS - B32_SCALING_BITS; // This multiplies n by the difference between the b and m factors for accuracy in the diviusion. 
-  scandal_div32(sum, n);
-  *sum += scandal_get_b(chan_num);
-  // scandal_bitdiv(sum, B32_SCALING_BITS); 
-  *sum >>= B32_SCALING_BITS;
-  return NO_ERR;
+	*sum *= scandal_get_m(chan_num);
+	*n <<= M32_SCALING_BITS - B32_SCALING_BITS; // This multiplies n by the difference between the b and m factors for accuracy in the diviusion. 
+	scandal_div32(sum, n);
+	*sum += scandal_get_b(chan_num);
+	// scandal_bitdiv(sum, B32_SCALING_BITS); 
+	*sum >>= B32_SCALING_BITS;
+	return NO_ERR;
 }
 
-u08 scandal_send_scaleaverage_channel(u08 pri, u16 chan_num, s32 *sum, s32 *n){
-
+u08 scandal_send_scaleaverage_channel(u08 pri, u16 chan_num, s32 *sum, s32 *n) {
 	scandal_get_scaleaverage(chan_num, sum, n);
 	return(scandal_send_channel(pri, chan_num, *sum)); 
 }
 
 void scandal_ms_delay(sc_time_t delay){
-  sc_time_t time = sc_get_timer();
-  while(time + delay > sc_get_timer()){
-    handle_scandal();
-  }
+	sc_time_t time = sc_get_timer();
+	while(time + delay > sc_get_timer()) {
+		handle_scandal();
+	}
 }
 
 void scandal_delay(int num){
-  volatile int i; 
-  for(i=num; i>0; i--)
-    ; 
+	volatile int i; 
+	for(i=num; i>0; i--)
+		; 
 }
-       
-#ifdef AVAILABLE_64       
+
+#ifdef AVAILABLE_64
 
 // This is intended for use with even positive denominators.
 // Adds accuracy to division.
 // This function has some serious problems. If you get random numbers use normal division instead.
 // I seem to have fixed the random number problem, by puting the maths in different lines.
-u08 scandal_div64(s64 *numerator, s64 *denominator){
-	if (*denominator != 0){
-	  if (*numerator > 0){
-      *numerator += (*denominator >> 1);
-      *numerator /= (*denominator);
-    }
-	  else if (*numerator <0){
-	    *numerator -= (*denominator >> 1);
-      *numerator /= (*denominator);
-    }
-	}
-	  return NO_ERR;
-		  
-}
 
 u08 scandal_integrate_trapz64(s64 *integral, s64 *timediff, s64 *old_val, s64 *pres_val, s64  *scaling)
 {

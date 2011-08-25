@@ -29,18 +29,18 @@
 #ifndef __SCANDAL_ENGINE__
 #define __SCANDAL_ENGINE__
 
-#include "types.h"
-#include "can.h"
-#include "timer.h"
-#include "obligations.h"
+#include <scandal/types.h>
+#include <scandal/can.h>
+#include <scandal/timer.h>
+#include <scandal/obligations.h>
 
 /* Types */
 /* Channel representative structure */
 typedef struct in_chan{
 	s32	value;
-        u32     time;
+	u32 time;
 	u32	rcvd_time;
-}in_channel;
+} in_channel;
 
 //#warning SIZEOF_IN_CHAN_CONFIG MAY ONLY WORK FOR MSP430
 #define SIZEOF_IN_CHAN_CONFIG   (1 + 2 + 1) /* 3 bytes - does this get padded by the compiler? YES */ 

@@ -18,7 +18,8 @@
  * warranty that such application will be suitable for the specified
  * use without further testing or modification.
 ****************************************************************************/
-#include "../include/driver_config.h"
+#include <project/driver_config.h>
+
 #if CONFIG_ENABLE_DRIVER_I2C==1
 #include <arch/type.h>
 #include <arch/i2c.h>

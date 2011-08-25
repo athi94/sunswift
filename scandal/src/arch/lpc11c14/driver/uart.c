@@ -8,7 +8,8 @@
  *   2009.12.07  ver 1.00    Preliminary version, first Release
  *
 ******************************************************************************/
-#include "../include/driver_config.h"
+#include <project/driver_config.h>
+
 #if CONFIG_ENABLE_DRIVER_UART==1
 #include <arch/uart.h>
 

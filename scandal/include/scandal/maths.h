@@ -29,7 +29,7 @@
 #ifdef    __SCANDAL_MATHS__
 #define   __SCANDAL_MATHS__
 
-#include "types.h"
+#include <scandal/types.h>
 
 s64      scandal_div64(s64 numerator, s64 denominator);
 s64      scandal_div32(s32 numerator, s32 denominator);

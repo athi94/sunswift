@@ -19,7 +19,7 @@
  * warranty that such application will be suitable for the specified
  * use without further testing or modification.
 ****************************************************************************/
-#include "../include/driver_config.h"
+#include <project/driver_config.h>
 
 #include <scandal/timer.h>
 

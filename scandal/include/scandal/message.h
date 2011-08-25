@@ -28,9 +28,10 @@
 #ifndef __SCANDAL_MESSAGE__
 #define __SCANDAL_MESSAGE__
 
-#include "types.h"
-#include "engine.h"
-#include "config.h"
+#include <scandal/types.h>
+#include <scandal/engine.h>
+
+#include <project/scandal_config.h>
 
 /* Priority definitions */
 #define CRITICAL_PRIORITY		0

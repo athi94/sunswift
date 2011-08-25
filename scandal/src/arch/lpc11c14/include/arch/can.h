@@ -22,9 +22,9 @@
 
 #if CONFIG_ENABLE_DRIVER_CAN==1
 
-#include "driver_config.h"
-#include "type.h"
+#include <project/driver_config.h>
 
+#include <arch/type.h>
 
 /* If TRANSMIT_ONLY is 0, it's a RX_TX bouncing mode, 
 use a PC workstation with CAN analyzer to generate

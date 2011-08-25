@@ -28,7 +28,7 @@
 #ifndef __SCANDAL_TIMER__
 #define __SCANDAL_TIMER__
 
-#include "types.h"
+#include <scandal/types.h>
 
 /* Global variables */ 
 extern uint64_t timesync_offset; 

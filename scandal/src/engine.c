@@ -34,33 +34,33 @@
 #include <scandal/devices.h>
 #include <scandal/message.h>
 
-#include "../include/scandal_config.h"
+#include <project/scandal_config.h>
 
-in_channel		                in_channels[NUM_IN_CHANNELS];
-scandal_config		                my_config;
-volatile u32				heartbeat_timer;
-uint64_t                       timesync_offset; 
+in_channel      in_channels[NUM_IN_CHANNELS];
+scandal_config  my_config;
+volatile u32    heartbeat_timer;
+uint64_t        timesync_offset; 
 
 /* Local Prototypes */
-void				        do_first_run(void);
+void            do_first_run(void);
 
-u08					handle_message(can_msg*	msg);
-inline u08				scandal_handle_channel(can_msg* msg);
-inline u08				scandal_handle_config(can_msg* msg);
-inline u08			        scandal_handle_reset(can_msg* msg);  
-inline u08                              scandal_handle_user_config(can_msg* msg);
-inline u08                              scandal_handle_command(can_msg* msg);
-inline u08                              scandal_handle_timesync(can_msg* msg);
+u08             handle_message(can_msg*	msg);
+inline u08      scandal_handle_channel(can_msg* msg);
+inline u08      scandal_handle_config(can_msg* msg);
+inline u08      scandal_handle_reset(can_msg* msg);
+inline u08      scandal_handle_user_config(can_msg* msg);
+inline u08      scandal_handle_command(can_msg* msg);
+inline u08      scandal_handle_timesync(can_msg* msg);
 
-void 				        set_channel_mb(u16 chan_num, s32 m, s32 b);
-void 				        retrieve_channel_mb(u16 chan_num);
+void            set_channel_mb(u16 chan_num, s32 m, s32 b);
+void            retrieve_channel_mb(u16 chan_num);
 
-u08					scandal_get_msg_type(can_msg*	msg);
-u08					scandal_get_msg_priority(can_msg* msg);
+u08             scandal_get_msg_type(can_msg *msg);
+u08             scandal_get_msg_priority(can_msg *msg);
 
 /* Functions */
 u08 scandal_init(void){
-	u16 	i;
+	u16 i;
 
 	timesync_offset = 0; 
 
@@ -127,14 +127,14 @@ s32 scandal_get_b(u16 chan_num)
 
 void scandal_set_m(u16 chan_num, s32 value)
 {
-  my_config.outs[chan_num].m = value;
-  sc_write_conf(&my_config); 
+	my_config.outs[chan_num].m = value;
+	sc_write_conf(&my_config); 
 }
 
 void scandal_set_b(u16 chan_num, s32 value)
 {
-  my_config.outs[chan_num].b = value;
-  sc_write_conf(&my_config); 
+	my_config.outs[chan_num].b = value;
+	sc_write_conf(&my_config); 
 }
 
 

@@ -28,7 +28,7 @@
 #ifndef __UART_H__
 #define __UART_H__
 
-#include "types.h"
+#include <scandal/types.h>
 
 /* UART Default baud rate definition */ 
 #define UART_DEFAULT_BAUD         115200         /* baud rate*/ 

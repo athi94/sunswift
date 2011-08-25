@@ -17,8 +17,8 @@
  * warranty that such application will be suitable for the specified
  * use without further testing or modification.
 ****************************************************************************/
-#include "../include/driver_config.h"
-#include "../include/target_config.h"
+#include <project/driver_config.h>
+#include <project/target_config.h>
 
 #include <arch/timer32.h>
 #include <arch/gpio.h>
@@ -40,8 +40,6 @@
   int16_t accx; // Accelero X Out
   int16_t accy; // Accelero Y Out
   int16_t accz; // Accelero Z Out
-
-
 
 extern volatile uint32_t I2CCount;
 extern volatile uint8_t I2CMasterBuffer[BUFSIZE];

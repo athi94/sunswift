@@ -28,8 +28,9 @@
 #include <scandal/error.h>
 #include <scandal/engine.h>
 #include <scandal/types.h>
-#include <scandal/config.h>
 #include <scandal/message.h>
+
+#include <project/scandal_config.h>
 
 u08  last_scandal_error = 0;
 u08  last_user_error = 0;
@@ -58,7 +59,7 @@ void scandal_do_user_err(u08  err){
 }
 
 u32 scandal_get_num_errors(void){
-  return num_errors;
+	return num_errors;
 }
 
 void do_fatal_error(u08 err){

@@ -46,7 +46,7 @@ extern "C" {
 // Code Red - if CMSIS is being used, then SystemInit() routine
 // will be called by startup code rather than in application's main()
 #if defined (__USE_CMSIS)
-#include "system_LPC11xx.h"
+#include <project/system_LPC11xx.h>
 #endif
 
 //*****************************************************************************
