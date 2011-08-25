@@ -54,10 +54,18 @@ extern volatile uint32_t I2CReadLength, I2CWriteLength;
 extern volatile uint32_t UARTCount;
 extern volatile uint8_t UARTBuffer[BUFSIZE];
 
+extern int32_t SCANDALClockOffset; //TEST
+
 #if ENABLE_CAN
 	extern message_object can_buff[MSG_OBJ_MAX];
 	extern uint32_t CANRxDone[MSG_OBJ_MAX];
+	volatile 
 #endif
+volatile float Acceleration=0; //To store the acceleration of the car for subtraction by the accelerometer
+volatile int32_t Acc_DiffV=0;
+volatile int32_t Acc_LastV=0;
+volatile uint32_t Acc_DiffT=0;
+volatile uint32_t Acc_LastT=0;
 /*******************************************************************************
 **   Main Function  main()
 *******************************************************************************/
@@ -82,7 +90,7 @@ int main (void)
 	//Blink LED's on built board
 	GPIOSetDir(2,8,1); //Green LED, Out
 	GPIOSetValue(2,8,0); //Green LED, Low (on)
-	//GPIOSetValue(2,8,1); //Green LED, High (off)
+	GPIOSetValue(2,8,1); //Green LED, High (off)
 
 	GPIOSetDir(2,7,1); //Yel LED, Out
 	GPIOSetValue(2,7,0); //Yel LED, Low (on)
@@ -231,7 +239,7 @@ int main (void)
   while (1)
   {
 
-#if 0	//Debug Section
+#if 1	//Debug Section
 			{
 
 				GPIOSetDir(2,9,0);
@@ -241,27 +249,22 @@ int main (void)
 				uint32_t ND1=0;
 				uint32_t ND2=0;
 				uint8_t RdNum=0;
+				int32_t tmpDataHold=0;
+				uint32_t tmpTimeHold=0;
+				
 
 				PrintUint(BinaryVariable);
 				j=0;
 				while ( 1 )
 				{ //Loop, runs at 5Hz
-					//delay(10);
+					delay(100);
 
-#if 0
-					  sprintf(UARTBUFF, "%u - ", j);
-					  for( i = 0; UARTBUFF[i] !='\0'; i++){
-						//UARTSend( &UARTBUFF[i], 1 ); //(uint8_t *)
-					  }
-
-
-					//LPC_CAN->ND1 = 0x0000FFFF;
-					ND1 = (LPC_CAN->IR1);// & 0x0000FFFF;
-					ND2 = (LPC_CAN->IR2);// & 0x0000FFFF;
-					PrintUint((ND2 << 16) | ND1);
-					//j++ ;
-#endif:
-
+#if 1
+				FetchData(0, &tmpDataHold, &tmpTimeHold);
+				SCANDAL_Send(7, 0, 61, 0, SCANDALClockOffset);
+				
+				
+#endif
 #if 0
 					RdNum = 1;
 
@@ -273,7 +276,7 @@ int main (void)
 #endif
 
 
-#if 1
+#if 0
 					for(j=0; j<20; j++)
 					{
 						if (CANRxDone[j]==1)
@@ -296,16 +299,6 @@ int main (void)
 					//CAN_MessageProcess(RdNum);
 
 
-#if 0
-					can_buff[0].id      = addrgen(1, 7, 0, 61, 0);	/* standard frame */
-					can_buff[0].dlc     = 0x08;		/* Length = 8 */
-					can_buff[0].data[0] = 0xAAAA;//0000
-					can_buff[0].data[1] = 0xBBBB;//03E1
-					can_buff[0].data[2] = 0xCCCC;//0006
-					can_buff[0].data[3] = 0xDDDD;//1A82
-
-					CAN_Send( 0, FALSE, (uint32_t *)&can_buff[0] );
-#endif
 					/*
 					for( i = 0; UARTBUFF[i] !='\0'; i++){
 						UARTSend( &UARTBUFF[i], 1 ); //(uint8_t *)
@@ -436,18 +429,29 @@ int main (void)
 	  //addrgen(uint16_t Ext, uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t NodTyp)
 	  //Extended, Priority, Type, Address, Channel
 
-	  CanPitch = CompXState*1000;
-	  CanRoll = CompYState*1000;
+
 	  CanTimeStamp = timer32_0_counter;
 	  if (timer32_0_counter>NextDataSendTime){
-	  can_buff[0].id      = addrgen(1, 7, 0, 61, 0);	/* standard frame */
-	  can_buff[0].dlc     = 0x08;		/* Length = 8 */
+	  
+	  CanPitch = CompXState*1000;
+	  CanRoll = CompYState*1000;
+	  int32_t CanAcc = ((int32_t) Acceleration) * 1000;
+	  
+/*	  can_buff[0].id      = addrgen(1, 7, 0, 61, 0);	// standard frame 
+	  can_buff[0].dlc     = 0x08;		// Length = 8 
 	  can_buff[0].data[0] = ((CanPitch >> 16) & 0x0000FFFF);//0000
 	  can_buff[0].data[1] = (CanPitch & 0x0000FFFF);//03E1
 	  can_buff[0].data[2] = ((CanTimeStamp >> 16) & 0x0000FFFF);//0006
 	  can_buff[0].data[3] = (CanTimeStamp & 0x0000FFFF);//1A82
 	  CAN_Send( 0, FALSE, (uint32_t *)&can_buff[0] );
+*/
+    SCANDAL_Send(7, 0, 61, 0, CanPitch);
+    SCANDAL_Send(7, 0, 61, 1, CanRoll);
+    SCANDAL_Send(7, 0, 61, 2, CanAcc);
 
+    //SCANDAL_Send(7, 0, 61, 0, CanAcc);
+    
+    
 
 //	  can_buff[1].id      = addrgen(1, 7, 0, 61, 1);
 //	  can_buff[1].dlc     = 0x08;
@@ -461,6 +465,9 @@ int main (void)
 	  //CAN_Send( 0, FALSE, (uint32_t *)&can_buff[0] );
 	  NextDataSendTime=timer32_0_counter+100;
 	  }
+	  
+	  
+	  
 	  // Send a heartbeat
 	  if (timer32_0_counter>NextHBSendTime){
 		  CanTimeStamp = timer32_0_counter;
