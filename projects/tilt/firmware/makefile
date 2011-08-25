@@ -7,7 +7,7 @@ LINKER = $(ARCH)/linker
 CMSIS = $(ARCH)/cmsis
 DRIVERS = $(ARCH)/driver
 STARTUP = $(ARCH)/startup
-BUILD = .#/output
+BUILD = ./build
 SRC = ./src
 
 #define utilities
@@ -31,56 +31,60 @@ PROJECT = main
 LINKSCRIPT = lpc1114_flash_crp.ld
 STARTUPSCRIPT = cr_startup_lpc11
 
-OBJECTS = $(PROJECT).o #source
-OBJECTS += core_cm0.o system_LPC11xx.o	#cmsis
-OBJECTS += gpio.o timer32.o uart.o can.o i2c.o		#drivers
-OBJECTS += $(STARTUPSCRIPT).o		#startup
-#edited stuff:
-#uart, can, i2c, math(??)
+OBJECTS  = $(BUILD)/$(PROJECT).o #source
+OBJECTS += $(BUILD)/core_cm0.o $(BUILD)/system_LPC11xx.o	#cmsis
+OBJECTS += $(BUILD)/gpio.o $(BUILD)/timer32.o $(BUILD)/uart.o $(BUILD)/can.o $(BUILD)/i2c.o		#drivers
+OBJECTS += $(BUILD)/$(STARTUPSCRIPT).o		#startup
 
 #compiler flags
 OPTIMISATION = 0
 DEBUG = 
-CFLAGS = -mcpu=$(MCU) -D__NEWLIB__ -D__USE_CMSIS -D__CODE_RED -mthumb -O$(OPTIMISATION) $(DEBUG)
-IFLAGS = -I$(SCANDAL)/include -I$(ARCH)/include -I$(ARCH)/cmsis -lm #Added lm for math.h
+CFLAGS  = -mcpu=$(MCU) -D__NEWLIB__ -D__USE_CMSIS -D__CODE_RED -mthumb -O$(OPTIMISATION) $(DEBUG)
+
+CFLAGS  = -I$(SCANDAL)/include # for scandal includes
+CFLAGS += -I$(ARCH)/include # for arch drivers
+CFLAGS += -I$(ARCH) # for cmsis
+CFLAGS += -lm #Added lm for math.h
 
 LSCRIPT = $(LINKER)/$(LINKSCRIPT)
-LFLAGS = -nostdlib  -Xlinker -Map=$(PROJECT).map -Xlinker --gc-sections -L $(LINKER) -T "$(LSCRIPT)"
+LFLAGS  = -nostdlib  -Xlinker -Map=$(PROJECT).map -Xlinker --gc-sections -L $(LINKER) -T "$(LSCRIPT)"
 
 .PHONY: all clean program
 
 all: $(PROJECT).axf $(PROJECT).bin
 
 $(PROJECT).axf: $(OBJECTS)
+	echo $(CFLAGS)
+	@mkdir -p $(BUILD)
 	@$(CC) $(CFLAGS) $(LFLAGS) $(OBJECTS) -o $(PROJECT).axf 
 
 ###compile object files individually
 $(BUILD)/main.o: $(SRC)/main.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD)/core_cm0.o: $(CMSIS)/core_cm0.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD)/system_LPC11xx.o: $(CMSIS)/system_LPC11xx.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD)/gpio.o: $(DRIVERS)/gpio.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD)/timer32.o: $(DRIVERS)/timer32.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD)/uart.o: $(DRIVERS)/uart.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD)/can.o: $(DRIVERS)/can.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD)/i2c.o: $(DRIVERS)/i2c.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD)/$(STARTUPSCRIPT).o: $(STARTUP)/$(STARTUPSCRIPT).c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -c -o $@ $<
 
 #$(BUILD)/LPC1xxx_startup.o: $(STARTUP)/LPC1xxx_startup.c
 
