@@ -17,8 +17,8 @@
  * warranty that such application will be suitable for the specified
  * use without further testing or modification.
 ****************************************************************************/
-#include "include/driver_config.h"
-#include "include/target_config.h"
+#include "../include/driver_config.h"
+#include "../include/target_config.h"
 
 #include <arch/timer32.h>
 #include <arch/gpio.h>

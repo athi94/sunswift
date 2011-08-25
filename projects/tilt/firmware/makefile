@@ -1,7 +1,7 @@
 #directory definitions
 ROOT = ../..
 SCANDAL = $(ROOT)/scandal
-ARCH = $(SCANDAL)/arch/lpc11c14
+ARCH = $(SCANDAL)/src/arch/lpc11c14
 UTILS = $(ROOT)/utils
 LINKER = $(ARCH)/linker
 CMSIS = $(ARCH)/cmsis
@@ -31,7 +31,7 @@ PROJECT = main
 LINKSCRIPT = lpc1114_flash_crp.ld
 STARTUPSCRIPT = cr_startup_lpc11
 
-OBJECTS = $(PROJECT).o			#source
+OBJECTS = $(PROJECT).o #source
 OBJECTS += core_cm0.o system_LPC11xx.o	#cmsis
 OBJECTS += gpio.o timer32.o uart.o can.o i2c.o		#drivers
 OBJECTS += $(STARTUPSCRIPT).o		#startup
@@ -42,7 +42,7 @@ OBJECTS += $(STARTUPSCRIPT).o		#startup
 OPTIMISATION = 0
 DEBUG = 
 CFLAGS = -mcpu=$(MCU) -D__NEWLIB__ -D__USE_CMSIS -D__CODE_RED -mthumb -O$(OPTIMISATION) $(DEBUG)
-IFLAGS = -I$(ARCH)/cmsis -I$(ARCH)/driver -I./include -lm #Added lm for math.h
+IFLAGS = -I$(SCANDAL)/include -I$(ARCH)/include -I$(ARCH)/cmsis -lm #Added lm for math.h
 
 LSCRIPT = $(LINKER)/$(LINKSCRIPT)
 LFLAGS = -nostdlib  -Xlinker -Map=$(PROJECT).map -Xlinker --gc-sections -L $(LINKER) -T "$(LSCRIPT)"
