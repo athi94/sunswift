@@ -28,9 +28,9 @@
 #ifndef   __SCANDAL_UTILS__
 #define   __SCANDAL_UTILS__
 
-#include "timer.h"
-#include "types.h"
-#include "timer.h"
+#include <scandal/timer.h>
+#include <scandal/types.h>
+#include <scandal/timer.h>
 
 // These are the scale up factors for the scaled channels. 
 // They are used to calculate scaling factors from calibration data.

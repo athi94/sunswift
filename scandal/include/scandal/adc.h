@@ -10,7 +10,8 @@
  
 #ifndef __ADC__ 
 #define __ADC__ 
-#include "scandal_types.h" 
+#include <scandal/types.h>
+
 void init_adc(void); 
 u16 sample_adc(u08 channel); 
 void enable_adc(void); 

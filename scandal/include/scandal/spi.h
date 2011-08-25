@@ -29,7 +29,8 @@
 #ifndef __SCANDAL_SPI__ 
 #define __SCANDAL_SPI__ 
 
-#include "types.h"
+#include <scandal/types.h>
+
 /* SPI Driver Prototypes */ 
 u08 init_spi(void);  
 u08 spi_select_device(u08	device);  

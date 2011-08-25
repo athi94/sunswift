@@ -19,7 +19,7 @@
  * warranty that such application will be suitable for the specified
  * use without further testing or modification.
 ****************************************************************************/
-#include "driver_config.h"
+#include <project/driver_config.h>
 #if CONFIG_ENABLE_DRIVER_GPIO==1
 
 #include <arch/gpio.h>

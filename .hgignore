@@ -4,3 +4,9 @@ syntax: glob
 *htm
 *History
 .DS_Store
+*.o
+*.bin
+*.axf
+*.elf
+*.map
+*.swp

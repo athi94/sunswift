@@ -26,20 +26,31 @@
  */
 
 #include <scandal/types.h>
+#include <scandal/error.h>
 #include <scandal/maths.h>
 
-u08 scandal_div32(s32 *numerator, s32 *denominator){
-	if (*denominator != 0){
-	  if (*numerator >0){
-      *numerator += (*denominator >> 1);
-      *numerator /= (*denominator);
-    }
-	  else if (*numerator <0){
-	    *numerator += (*denominator >> 1);
-      *numerator /= (*denominator);
-    }
+u08 scandal_div32(s32 *numerator, s32 *denominator) {
+	if (*denominator != 0) {
+		if (*numerator >0) {
+			*numerator += (*denominator >> 1);
+			*numerator /= (*denominator);
+	 	} else if (*numerator <0) {
+			*numerator += (*denominator >> 1);
+			*numerator /= (*denominator);
+		}
 	}
-	  return NO_ERR;
+	return NO_ERR;
 }
 
-
+u08 scandal_div64(s64 *numerator, s64 *denominator){
+	if (*denominator != 0){
+		if (*numerator > 0){
+			*numerator += (*denominator >> 1);
+			*numerator /= (*denominator);
+		} else if (*numerator <0){
+			*numerator -= (*denominator >> 1);
+			*numerator /= (*denominator);
+		}
+	}
+	return NO_ERR;
+}

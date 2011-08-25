@@ -32,7 +32,8 @@
 #define __SCANDAL_CAN__
 
 /* Includes */
-#include "types.h"
+#include <scandal/types.h>
+
 /* Constant definitions */
 
 /* Baud Rate Definitions */

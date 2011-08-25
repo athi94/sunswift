@@ -37,10 +37,11 @@
  *			Idea - Combine ProcessReceived and CAN_MsgConfigParam to make it easier to see whats happening where
  *							It could also be used to initialise static variables!!!
  */
-#include "../include/driver_config.h"
-#if CONFIG_ENABLE_DRIVER_CAN==1
-#include <arch/can.h>
+#include <project/driver_config.h>
 
+#if CONFIG_ENABLE_DRIVER_CAN==1
+
+#include <arch/can.h>
 #include <arch/gpio.h>
 #include <arch/timer32.h>
 #include <arch/uart.h>
@@ -73,6 +74,65 @@ extern volatile int32_t Acc_DiffV;
 extern volatile int32_t Acc_LastV;
 extern volatile uint32_t Acc_DiffT;
 extern volatile uint32_t Acc_LastT;
+
+/* Scandal wrappers
+ * *****************/
+
+#include <scandal/can.h>
+
+void init_can(void) {
+
+}
+
+/*! Get a message from the CAN controller. */
+u08  can_get_msg(can_msg* msg) {
+	return 0;
+}
+
+/*! Send a message using the CAN controller */
+u08  can_send_msg(can_msg* msg, u08 priority) {
+	return 0;
+}
+
+/*! Register a message ID/mask. This guarantees that these messages will
+  not be filtered out by hardware filters. Other messages are not
+  guaranteed */
+u08  can_register_id(u32 mask, u32 data, u08 priority) {
+	return 0;
+}
+
+/*! Should be called when the CAN controller has an interrupt */
+/*! \todo This is probably not the right location for this */
+void can_interrupt(void) {
+
+}
+
+/*! Should be called when there is idle time available and the CAN
+	controller is able to do some housekeeping */
+void can_poll(void) {
+
+}
+
+/* Parameter settings */
+u08  can_baud_rate(u08 mode) {
+	return 0;
+}
+
+/* Enable and disable CAN interrupts */
+void  enable_can_interrupt(void) {
+
+}
+
+void  disable_can_interrupt(void) {
+
+}
+
+/* *******************
+ * End Scandal wrappers
+ */
+
+
+
 
 void FetchData(uint8_t MsgNum, int32_t *DataPointer, uint32_t *TimePointer){
 

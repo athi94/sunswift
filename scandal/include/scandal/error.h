@@ -28,7 +28,7 @@
 #ifndef __SCANDAL_ERR__
 #define __SCANDAL_ERR__
 
-#include "types.h"
+#include <scandal/types.h>
 
 /* Scandal error codes */
 #define NO_ERR           0

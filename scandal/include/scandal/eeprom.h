@@ -29,23 +29,25 @@
 
 #include <scandal/types.h>
 #include <scandal/engine.h>
-#include <project/config.h>
+
+#include <project/scandal_config.h>
 
 #define SIZEOF_SCANDAL_CONFIG  ((NUM_IN_CHANNELS * SIZEOF_IN_CHAN_CONFIG) + \
 				(NUM_OUT_CHANNELS * SIZEOF_OUT_CHAN_CONFIG) + \
 				1 + 1)
-typedef struct conf{
-	u08					version;		/* Scandal version */
-	u08					addr;			/* Node address */
+
+typedef struct conf {
+	u08					version;				/* Scandal version */
+	u08					addr;					/* Node address */
 	in_channel_config 	ins[NUM_IN_CHANNELS];	/* In channel configuration */
 	out_channel_config 	outs[NUM_OUT_CHANNELS]; /* Out channel configuration */
-}scandal_config;
+} scandal_config;
 
 /* Local Prototypes */
 void sc_init_eeprom(void);
-void sc_read_conf(scandal_config* 	conf);
-void sc_write_conf(scandal_config*	conf);
-void sc_user_eeprom_read_block(u32 loc, u08* data, u08 length);
-void sc_user_eeprom_write_block(u32 loc, u08* data, u08 length);
+void sc_read_conf(scandal_config *conf);
+void sc_write_conf(scandal_config *conf);
+void sc_user_eeprom_read_block(u32 loc, u08 *data, u08 length);
+void sc_user_eeprom_write_block(u32 loc, u08 *data, u08 length);
 
 #endif

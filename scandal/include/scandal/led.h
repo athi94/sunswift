@@ -25,7 +25,7 @@
  * along with Scandal.  If not, see <http://www.gnu.org/licenses/>.
  */
    
-#include "types.h"
+#include <scandal/types.h>
 
 void red_led(u08 on);
 void toggle_red_led(void);
