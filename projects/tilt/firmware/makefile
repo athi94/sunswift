@@ -48,7 +48,7 @@ CFLAGS += -I./include # for project includes
 CFLAGS += -lm #Added lm for math.h
 
 LSCRIPT = $(LINKER)/$(LINKSCRIPT)
-LFLAGS  = -nostdlib  -Xlinker -Map=$(PROJECT).map -Xlinker --gc-sections -L $(LINKER) -T "$(LSCRIPT)"
+LFLAGS  = -nostdlib  -Xlinker -Map=$(BUILD)/$(PROJECT).map -Xlinker --gc-sections -L $(LINKER) -T "$(LSCRIPT)"
 
 .PHONY: all clean program
 
@@ -121,6 +121,7 @@ program: $(PROJECT).axf
 	@#sudo $(FLASH_CHIP) -wire=winusb -p$(UC) -flash-load=$(BUILD)/$(PROJECT).bin -load-base=0x0000
 
 clean:
+	@if [ "$(BUILD)" == "." ]; then echo -e "\033[91mDon't use . as BUILD\033[0m"; exit 1; fi
 	@rm -Rf $(BUILD)
 
 $(PROJECT).bin: $(PROJECT).axf
