@@ -1,5 +1,5 @@
 #directory definitions
-ROOT = ../..
+ROOT = ../../..
 SCANDAL = $(ROOT)/scandal
 ARCH = $(SCANDAL)/src/arch/lpc11c14
 UTILS = $(ROOT)/utils
@@ -7,7 +7,7 @@ LINKER = $(ARCH)/linker
 CMSIS = $(ARCH)/cmsis
 DRIVERS = $(ARCH)/driver
 STARTUP = $(ARCH)/startup
-BUILD = ./build
+BUILD=. # never set to . otherwise clean will nuke everything
 SRC = ./src
 
 #define utilities
@@ -31,19 +31,21 @@ PROJECT = main
 LINKSCRIPT = lpc1114_flash_crp.ld
 STARTUPSCRIPT = cr_startup_lpc11
 
-OBJECTS  = $(BUILD)/$(PROJECT).o #source
-OBJECTS += $(BUILD)/core_cm0.o $(BUILD)/system_LPC11xx.o	#cmsis
-OBJECTS += $(BUILD)/gpio.o $(BUILD)/timer32.o $(BUILD)/uart.o $(BUILD)/can.o $(BUILD)/i2c.o		#drivers
-OBJECTS += $(BUILD)/$(STARTUPSCRIPT).o		#startup
+OBJECTS  = $(PROJECT).o
+OBJECTS += core_cm0.o system_LPC11xx.o
+OBJECTS += gpio.o timer32.o uart.o can.o i2c.o
+OBJECTS += engine.o error.o manager.o maths.o message.o utils.o
+OBJECTS += $(STARTUPSCRIPT).o
 
 #compiler flags
 OPTIMISATION = 0
 DEBUG = 
-CFLAGS  = -mcpu=$(MCU) -D__NEWLIB__ -D__USE_CMSIS -D__CODE_RED -mthumb -O$(OPTIMISATION) $(DEBUG)
 
-CFLAGS  = -I$(SCANDAL)/include # for scandal includes
+CFLAGS  = -mcpu=$(MCU) -DLPC11C14 -D__NEWLIB__ -D__USE_CMSIS -D__CODE_RED -mthumb -O$(OPTIMISATION) $(DEBUG)
+CFLAGS += -I$(SCANDAL)/include # for scandal includes
 CFLAGS += -I$(ARCH)/include # for arch drivers
 CFLAGS += -I$(ARCH) # for cmsis
+CFLAGS += -I./include # for cmsis to use system_LPC11xx.h
 CFLAGS += -lm #Added lm for math.h
 
 LSCRIPT = $(LINKER)/$(LINKSCRIPT)
@@ -54,36 +56,38 @@ LFLAGS  = -nostdlib  -Xlinker -Map=$(PROJECT).map -Xlinker --gc-sections -L $(LI
 all: $(PROJECT).axf $(PROJECT).bin
 
 $(PROJECT).axf: $(OBJECTS)
-	echo $(CFLAGS)
-	@mkdir -p $(BUILD)
 	@$(CC) $(CFLAGS) $(LFLAGS) $(OBJECTS) -o $(PROJECT).axf 
 
 ###compile object files individually
-$(BUILD)/main.o: $(SRC)/main.c
+$(PROJECT).o: src/$(PROJECT).c
+	@echo $(CFLAGS)
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD)/core_cm0.o: $(CMSIS)/core_cm0.c
+core_cm0.o: $(CMSIS)/core_cm0.c
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD)/system_LPC11xx.o: $(CMSIS)/system_LPC11xx.c
+engine.o: $(SCANDAL)/src/engine.c
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD)/gpio.o: $(DRIVERS)/gpio.c
+system_LPC11xx.o: $(CMSIS)/system_LPC11xx.c
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD)/timer32.o: $(DRIVERS)/timer32.c
+gpio.o: $(DRIVERS)/gpio.c
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD)/uart.o: $(DRIVERS)/uart.c
+timer32.o: $(DRIVERS)/timer32.c
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD)/can.o: $(DRIVERS)/can.c
+uart.o: $(DRIVERS)/uart.c
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD)/i2c.o: $(DRIVERS)/i2c.c
+can.o: $(DRIVERS)/can.c
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD)/$(STARTUPSCRIPT).o: $(STARTUP)/$(STARTUPSCRIPT).c
+i2c.o: $(DRIVERS)/i2c.c
+	@$(CC) $(CFLAGS) -c -o $@ $<
+
+$(STARTUPSCRIPT).o: $(STARTUP)/$(STARTUPSCRIPT).c
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
 #$(BUILD)/LPC1xxx_startup.o: $(STARTUP)/LPC1xxx_startup.c
@@ -98,15 +102,6 @@ program: $(PROJECT).axf
 	@#sudo $(FLASH_CHIP) -wire=winusb -p$(UC) -flash-load=$(BUILD)/$(PROJECT).bin -load-base=0x0000
 
 clean:
-	@$(REMOVE) $(BUILD)/$(OBJECTS)
-	@$(REMOVE) $(BUILD)/$(PROJECT).hex
-	@$(REMOVE) $(BUILD)/$(PROJECT).elf
-	@$(REMOVE) $(BUILD)/$(PROJECT).map
-	@$(REMOVE) $(BUILD)/$(PROJECT).bin
-	@$(REMOVE) $(BUILD)/$(PROJECT).axf
-	@$(REMOVE) $(BUILD)/*~
-	@$(REMOVE) $(BUILD)/*.o 
-	@$(REMOVE) $(BUILD)/*.lst
 
 $(PROJECT).bin: $(PROJECT).axf
 	@$(SIZE) $(PROJECT).axf; $(OBJCOPY) -O binary $(PROJECT).axf $(PROJECT).bin ; $(CHECKSUM) -p $(UC) -d $(PROJECT).bin;

@@ -21,7 +21,8 @@
 ****************************************************************************/
 #include "driver_config.h"
 #if CONFIG_ENABLE_DRIVER_GPIO==1
-#include "gpio.h"
+
+#include <arch/gpio.h>
 
 #if CONFIG_GPIO_DEFAULT_PIOINT0_IRQHANDLER==1
 volatile uint32_t gpio0_counter = 0;

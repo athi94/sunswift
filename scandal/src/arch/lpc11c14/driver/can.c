@@ -37,12 +37,13 @@
  *			Idea - Combine ProcessReceived and CAN_MsgConfigParam to make it easier to see whats happening where
  *							It could also be used to initialise static variables!!!
  */
-#include "driver_config.h"
+#include "../include/driver_config.h"
 #if CONFIG_ENABLE_DRIVER_CAN==1
-#include "can.h"
+#include <arch/can.h>
 
-#include "gpio.h"
-#include "timer32.h"
+#include <arch/gpio.h>
+#include <arch/timer32.h>
+#include <arch/uart.h>
 
 #define CUSTOM_CONFIG 1
 #define REORDER_DATA 1
@@ -54,7 +55,6 @@ volatile uint32_t EPassCnt = 0;
 
 //UART Prototyping stuff:
 
-#include "uart.h"
 extern volatile uint32_t UARTCount;
 char UARTBUFF[128];
 #define UART_DEBUG_CAN 1

@@ -19,10 +19,12 @@
  * warranty that such application will be suitable for the specified
  * use without further testing or modification.
 ****************************************************************************/
-#include "include/driver_config.h"
+#include "../include/driver_config.h"
+
+#include <scandal/timer.h>
 
 #if CONFIG_ENABLE_DRIVER_TIMER32==1
-#include <timer32.h>
+#include <arch/timer32.h>
 
 /* ===================
  * CodeRed - Modified file to extract out interrupt handler related code,

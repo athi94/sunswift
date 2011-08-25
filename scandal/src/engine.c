@@ -30,10 +30,11 @@
 #include <scandal/timer.h>
 #include <scandal/led.h>
 #include <scandal/error.h>
-#include <scandal/config.h>
 #include <scandal/eeprom.h>
 #include <scandal/devices.h>
 #include <scandal/message.h>
+
+#include "../include/scandal_config.h"
 
 in_channel		                in_channels[NUM_IN_CHANNELS];
 scandal_config		                my_config;
