@@ -17,19 +17,17 @@
  * warranty that such application will be suitable for the specified
  * use without further testing or modification.
 ****************************************************************************/
-#include "driver_config.h"
-#include "target_config.h"
+#include "include/driver_config.h"
+#include "include/target_config.h"
 
-#include "timer32.h"
-#include "gpio.h"
-
-#include "uart.h"
-
-#include "type.h"
-#include "can.h"
-#include "i2c.h"
+#include <arch/timer32.h>
+#include <arch/gpio.h>
+#include <arch/uart.h>
+#include <arch/type.h>
+#include <arch/can.h>
+#include <arch/i2c.h>
 #include <math.h>
-//#include "small_gpio.h"
+
 #include "main.h"
 
   uint32_t cyc; // Cycle variable for everaging
@@ -72,10 +70,7 @@ volatile uint32_t Acc_LastT=0;
 //int __main();
 int main (void)
 {
-
-	// Initializing the 0th 32 bit timer with a period of 1ms
-	init_timer32(0,  (SystemCoreClock/1000-1));
-	enable_timer32(0); // Enabling the timer
+	scandal_init();
 
 	init_timer32PWM(1, 1463, 2);
 	enable_timer32(1);

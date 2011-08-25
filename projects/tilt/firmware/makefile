@@ -1,13 +1,12 @@
 #directory definitions
-SVNROOT = ../..
-SCANDAL = $(SVNROOT)/scandal
-ARCH = $(SVNROOT)/arch
-UTILS = $(SVNROOT)/utils
-ENV = $(ARCH)/lpc11c14env
-LINKER = $(ENV)/linker
-CMSIS = $(ENV)/cmsis
-DRIVERS = $(ENV)/driver
-STARTUP = $(ENV)/startup
+ROOT = ../..
+SCANDAL = $(ROOT)/scandal
+ARCH = $(SCANDAL)/arch/lpc11c14
+UTILS = $(ROOT)/utils
+LINKER = $(ARCH)/linker
+CMSIS = $(ARCH)/cmsis
+DRIVERS = $(ARCH)/driver
+STARTUP = $(ARCH)/startup
 BUILD = .#/output
 SRC = ./src
 
@@ -43,7 +42,7 @@ OBJECTS += $(STARTUPSCRIPT).o		#startup
 OPTIMISATION = 0
 DEBUG = 
 CFLAGS = -mcpu=$(MCU) -D__NEWLIB__ -D__USE_CMSIS -D__CODE_RED -mthumb -O$(OPTIMISATION) $(DEBUG)
-IFLAGS = -I$(ENV)/cmsis -I$(ENV)/driver -I./include -lm #Added lm for math.h
+IFLAGS = -I$(ARCH)/cmsis -I$(ARCH)/driver -I./include -lm #Added lm for math.h
 
 LSCRIPT = $(LINKER)/$(LINKSCRIPT)
 LFLAGS = -nostdlib  -Xlinker -Map=$(PROJECT).map -Xlinker --gc-sections -L $(LINKER) -T "$(LSCRIPT)"
@@ -54,7 +53,6 @@ all: $(PROJECT).axf $(PROJECT).bin
 
 $(PROJECT).axf: $(OBJECTS)
 	@$(CC) $(CFLAGS) $(LFLAGS) $(OBJECTS) -o $(PROJECT).axf 
-	
 
 ###compile object files individually
 $(BUILD)/main.o: $(SRC)/main.c
@@ -71,8 +69,7 @@ $(BUILD)/gpio.o: $(DRIVERS)/gpio.c
 
 $(BUILD)/timer32.o: $(DRIVERS)/timer32.c
 	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
-#uart, can, i2c, math(??)
-#Edit Start
+
 $(BUILD)/uart.o: $(DRIVERS)/uart.c
 	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
 
@@ -81,7 +78,7 @@ $(BUILD)/can.o: $(DRIVERS)/can.c
 
 $(BUILD)/i2c.o: $(DRIVERS)/i2c.c
 	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
-#Edit Finish
+
 $(BUILD)/$(STARTUPSCRIPT).o: $(STARTUP)/$(STARTUPSCRIPT).c
 	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
 
@@ -110,4 +107,3 @@ clean:
 $(PROJECT).bin: $(PROJECT).axf
 	@$(SIZE) $(PROJECT).axf; $(OBJCOPY) -O binary $(PROJECT).axf $(PROJECT).bin ; $(CHECKSUM) -p $(UC) -d $(PROJECT).bin;
 	@echo ""
-
