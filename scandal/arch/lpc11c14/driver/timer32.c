@@ -19,9 +19,10 @@
  * warranty that such application will be suitable for the specified
  * use without further testing or modification.
 ****************************************************************************/
-#include "driver_config.h"
+#include "include/driver_config.h"
+
 #if CONFIG_ENABLE_DRIVER_TIMER32==1
-#include "timer32.h"
+#include <timer32.h>
 
 /* ===================
  * CodeRed - Modified file to extract out interrupt handler related code,
@@ -29,16 +30,39 @@
  * Set TIMER32_GENERIC_INTS to 1 to reenable original code.
  * =================== */
 volatile uint32_t timer32_0_period = 0;
+
 #ifdef CONFIG_TIMER32_DEFAULT_TIMER32_0_IRQHANDLER
 volatile uint32_t timer32_0_counter = 0;
 volatile uint32_t timer32_0_capture = 0;
 #endif //CONFIG_TIMER32_DEFAULT_TIMER32_0_IRQHANDLER
 
 volatile uint32_t timer32_1_period = 0;
+
 #ifdef CONFIG_TIMER32_DEFAULT_TIMER32_1_IRQHANDLER
 volatile uint32_t timer32_1_counter = 0;
 volatile uint32_t timer32_1_capture = 0;
 #endif //CONFIG_TIMER32_DEFAULT_TIMER32_1_IRQHANDLER
+
+/* Scandal wrappers
+ * *****************/
+
+void sc_init_timer(void) {
+	init_timer32(0,  (SystemCoreClock/1000-1));
+	enable_timer32(0); // Enabling the timer
+}
+
+void sc_set_timer(sc_time_t time) {
+	timer32_0_counter = (uint32_t)time;
+}
+
+sc_time_t sc_get_timer(void) {
+	return (sc_time_t)timer32_0_counter;
+}
+
+/* *******************
+ * End Scandal wrappers
+ */
+
 
 /*****************************************************************************
 ** Function name:		delay32Ms
