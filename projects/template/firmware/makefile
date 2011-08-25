@@ -1,14 +1,13 @@
 #directory definitions
-SVNROOT = ../..
-SCANDAL = $(SVNROOT)/scandal
-ARCH = $(SVNROOT)/arch
-UTILS = $(SVNROOT)/utils
-ENV = $(ARCH)/lpc1114env
-LINKER = $(ENV)/linker
-CMSIS = $(ENV)/cmsis
-DRIVERS = $(ENV)/driver
-STARTUP = $(ENV)/startup
-BUILD = .#/output
+ROOT = ../../..
+SCANDAL = $(ROOT)/scandal
+ARCH = $(SCANDAL)/src/arch/lpc11c14
+UTILS = $(ROOT)/utils
+LINKER = $(ARCH)/linker
+CMSIS = $(ARCH)/cmsis
+DRIVERS = $(ARCH)/driver
+STARTUP = $(ARCH)/startup
+BUILD=./build# never . or clean will delete everything
 SRC = ./src
 
 #define utilities
@@ -20,60 +19,97 @@ OBJCOPY = arm-none-eabi-objcopy
 START_PROGRAMMER = dfu-util
 FLASH_CHIP = crt_emu_lpc11_13_nxp
 CHECKSUM = checksum
-REMOVE = rm -f
 
 #architecture
 MCU = cortex-m0
-UC = LPC1114/301
+UC = LPC11C14/301
 
 #define files
-PROJECT = blinky_main
+PROJECT = main
 
-LINKSCRIPT = linkscript_lpcxpresso
+LINKSCRIPT = lpc1114_flash_crp.ld
 STARTUPSCRIPT = cr_startup_lpc11
 
-OBJECTS = $(PROJECT).o			#source
-OBJECTS += core_cm0.o system_LPC11xx.o	#cmsis
-OBJECTS += gpio.o timer32.o		#drivers
-OBJECTS += $(STARTUPSCRIPT).o		#startup
+OBJECTS  = $(PROJECT).o scandal_obligations.o
+OBJECTS += core_cm0.o system_LPC11xx.o
+OBJECTS += gpio.o timer32.o uart.o can.o i2c.o flash.o
+OBJECTS += engine.o error.o manager.o maths.o message.o utils.o
+OBJECTS += $(STARTUPSCRIPT).o
 
 #compiler flags
-OPTIMISATION = 0
+OPTIMISATION =  3 # we need this to fit our code in the flash at the moment :-(
 DEBUG = 
-CFLAGS = -mcpu=$(MCU) -D__NEWLIB__ -D__USE_CMSIS -D__CODE_RED -mthumb -O$(OPTIMISATION) $(DEBUG)
-IFLAGS = -I$(ENV)/cmsis -I$(ENV)/driver -I./include
 
-LSCRIPT = $(LINKER)/$(LINKSCRIPT).ld
-LFLAGS = -nostdlib  -Xlinker -Map=$(PROJECT).map -Xlinker --gc-sections -T "$(LSCRIPT)"
+CFLAGS  = -mcpu=$(MCU) -DLPC11C14 -D__NEWLIB__ -D__USE_CMSIS -D__CODE_RED -mthumb -O$(OPTIMISATION) $(DEBUG)
+CFLAGS += -I$(SCANDAL)/include # for scandal includes
+CFLAGS += -I$(ARCH)/include # for arch drivers
+CFLAGS += -I$(ARCH) # for cmsis
+CFLAGS += -I./include # for project includes
+CFLAGS += -lm #Added lm for math.h
+
+LSCRIPT = $(LINKER)/$(LINKSCRIPT)
+LFLAGS  = -nostdlib  -Xlinker -Map=$(BUILD)/$(PROJECT).map -Xlinker --gc-sections -L $(LINKER) -T "$(LSCRIPT)"
 
 .PHONY: all clean program
 
-all: $(PROJECT).axf
+all: $(PROJECT).axf $(PROJECT).bin
 
 $(PROJECT).axf: $(OBJECTS)
-	@$(CC) $(CFLAGS) $(LFLAGS) $^ -o $(PROJECT).axf 
-	
+	@$(CC) $(CFLAGS) $(LFLAGS) $(addprefix $(BUILD)/,$(OBJECTS)) -o $(BUILD)/$(PROJECT).axf 
 
 ###compile object files individually
-$(BUILD)/blinky_main.o: $(SRC)/blinky_main.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+$(PROJECT).o: src/$(PROJECT).c
+	@mkdir -p $(BUILD)
+	@if [ "$(BUILD)" == "." ]; then echo -e "\033[91mDon't use . as BUILD\033[0m"; exit 1; fi
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
-$(BUILD)/core_cm0.o: $(CMSIS)/core_cm0.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+scandal_obligations.o: src/scandal_obligations.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
-$(BUILD)/system_LPC11xx.o: $(CMSIS)/system_LPC11xx.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+core_cm0.o: $(CMSIS)/core_cm0.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
-$(BUILD)/gpio.o: $(DRIVERS)/gpio.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+engine.o: $(SCANDAL)/src/engine.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
-$(BUILD)/timer32.o: $(DRIVERS)/timer32.c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+error.o: $(SCANDAL)/src/error.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
-$(BUILD)/$(STARTUPSCRIPT).o: $(STARTUP)/$(STARTUPSCRIPT).c
-	@$(CC) $(CFLAGS) $(IFLAGS) -c -o $@ $<
+manager.o: $(SCANDAL)/src/manager.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
-$(BUILD)/LPC1xxx_startup.o: $(STARTUP)/LPC1xxx_startup.c
+message.o: $(SCANDAL)/src/message.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
+
+utils.o: $(SCANDAL)/src/utils.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
+
+maths.o: $(SCANDAL)/src/maths.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
+
+system_LPC11xx.o: $(CMSIS)/system_LPC11xx.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
+
+gpio.o: $(DRIVERS)/gpio.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
+
+timer32.o: $(DRIVERS)/timer32.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
+
+uart.o: $(DRIVERS)/uart.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
+
+can.o: $(DRIVERS)/can.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
+
+flash.o: $(DRIVERS)/flash.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
+
+i2c.o: $(DRIVERS)/i2c.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
+
+$(STARTUPSCRIPT).o: $(STARTUP)/$(STARTUPSCRIPT).c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 program: $(PROJECT).axf
 	@# see http://support.code-red-tech.com/CodeRedWiki/CommandLineFlashProgramming
@@ -85,17 +121,11 @@ program: $(PROJECT).axf
 	@#sudo $(FLASH_CHIP) -wire=winusb -p$(UC) -flash-load=$(BUILD)/$(PROJECT).bin -load-base=0x0000
 
 clean:
-	@$(REMOVE) $(BUILD)/$(OBJECTS)
-	@$(REMOVE) $(BUILD)/$(PROJECT).hex
-	@$(REMOVE) $(BUILD)/$(PROJECT).elf
-	@$(REMOVE) $(BUILD)/$(PROJECT).map
-	@$(REMOVE) $(BUILD)/$(PROJECT).bin
-	@$(REMOVE) $(BUILD)/$(PROJECT).axf
-	@$(REMOVE) $(BUILD)/*~
-	@$(REMOVE) $(BUILD)/*.o 
-	@$(REMOVE) $(BUILD)/*.lst
+	@if [ "$(BUILD)" == "." ]; then echo -e "\033[91mDon't use . as BUILD\033[0m"; exit 1; fi
+	@rm -Rf $(BUILD)
 
-#$(PROJECT).bin: $(PROJECT).axf
-#	@$(SIZE) $(PROJECT).axf; $(OBJCOPY) -O binary $(PROJECT).axf $(PROJECT).bin ; $(CHECKSUM) -p $(UC) -d $(PROJECT).bin;
-#	@echo ""
-
+$(PROJECT).bin: $(PROJECT).axf
+	@$(SIZE) $(BUILD)/$(PROJECT).axf; 
+	$(OBJCOPY) -O binary $(BUILD)/$(PROJECT).axf $(BUILD)/$(PROJECT).bin;
+	$(CHECKSUM) -p $(UC) -d $(BUILD)/$(PROJECT).bin;
+	@echo
