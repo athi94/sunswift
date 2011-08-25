@@ -175,8 +175,12 @@ extern void CAN_MessageProcess( uint8_t MsgObjNo );
 extern void CAN_Send( uint8_t msg_no, uint8_t received_flag, uint32_t *data );
 extern void CAN_MsgConfigParam(uint8_t msg_no, uint8_t *eob, uint32_t *filtermask, uint32_t *filteraddr);
 extern void SCANDAL_Send(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t Channel_NodeType, int32_t data);
-extern uint32_t SCANDAL_AddrGen(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t NodTyp);
+extern uint32_t SCANDAL_AddrGen(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t Chnl_NodTyp);
 extern void FlipValues(uint32_t Input, uint32_t *D1, uint32_t *D2);
+extern void FetchData(uint8_t MsgNum, int32_t *DataPointer, uint32_t *TimePointer);
+extern void FetchHeaders(uint8_t MsgNum, uint16_t *Pri, uint16_t *MsgType, uint16_t *NodAddr, uint16_t *Chnl_NodTyp);
+extern void ProcessReceived(uint8_t MsgNum);
+extern uint8_t BufferCheck(uint8_t ToCheck);
 //( MsgType << 18) | (NodAddr << 10) | NodTyp
 
 #endif
