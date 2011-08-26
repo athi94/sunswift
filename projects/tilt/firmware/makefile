@@ -27,7 +27,11 @@ UC = LPC11C14/301
 #define files
 PROJECT = main
 
-LINKSCRIPT = lpc1114_flash_crp.ld
+#LINKSCRIPT = lpc1114_flash_crp.ld
+LINKSCRIPT=lpc1114_flash_can_crp.ld
+#Should LINKSCRIPT=lpc1114_flash_can_crp.ld, It is slightly different in terms of memory management
+#Changed on 23 Aug - Charith, saw something in the user manual to do with some black of memory at the
+#top being required by the CAN controller
 STARTUPSCRIPT = cr_startup_lpc11
 
 OBJECTS  = $(PROJECT).o scandal_obligations.o
