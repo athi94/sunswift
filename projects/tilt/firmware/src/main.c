@@ -135,7 +135,8 @@ int main (void)
 		ModemInit();
 	#endif
 
- /*//	Clock Division for the Gyro
+ /*//	Clock Division for the Gyro, not used
+  * TODO: Save the syntax somewhere and remove this from main
 		LPC_SYSCON->SYSAHBCLKCTRL |= (1<<6); // Enable GPIO clk
 		LPC_IOCON->PIO0_1 &= ~0x3F; // Select clkout function for P0.1
 		LPC_IOCON->PIO0_1 |= 0x01;
@@ -147,11 +148,6 @@ int main (void)
 		LPC_SYSCON->CLKOUTDIV = 200;//1465; // Divided by 1
 */
 
-/*	  while (1)
-	  {
-		printf("%u\n", P07IO); //gpioGetValue(2, 4)
-	  }
-*/
 	  //GPIO Silkscreen errors for LPCXpresso:
 	  // IC 2.4 is connected to USB-DM
 	  //PCB 2.4 = IC 3.4
@@ -233,69 +229,132 @@ int main (void)
   {
 
 #if 1	//Debug Section
-			{
+	  {
 
-				GPIOSetDir(2,9,0);
-				maginit();
-				delay(100);
-				uint32_t BinaryVariable=0;
-				uint32_t ND1=0;
-				uint32_t ND2=0;
-				uint8_t RdNum=0;
-				int32_t tmpDataHold=0;
-				uint32_t tmpTimeHold=0;
-				
+		GPIOSetDir(2,9,0);
+		maginit();
+		delay(100);
+		uint32_t BinaryVariable=0;
+		uint32_t ND1=0;
+		uint32_t ND2=0;
+		uint8_t RdNum=0;
+		int32_t tmpDataHold=0;
+		uint32_t tmpTimeHold=0;
 
-				PrintUint(BinaryVariable);
-				j=0;
-				while ( 1 )
-				{ //Loop, runs at 5Hz
-					delay(100);
+		// LOOK HERE ETIENNE <-----------------------------------------------------------------------
 
-#if 1
-				FetchData(0, &tmpDataHold, &tmpTimeHold);
-				SCANDAL_Send(7, 0, 61, 0, SCANDALClockOffset);
-				
-				
+		
+		//These two are for setting up the ability to call IAP (In application programming, ie writing to flash)
+		IAP iap_entry;
+		iap_entry=(IAP) IAP_LOCATION;
+
+		//Sector 7 (there are 8 sectors, 0 up to 7) starts from 0x00007000 so this is just the pointer of the start
+		//of sector 7. 
+		uint32_t *regReadVal=((pREG32 (0x00007000)));//uint32_t* (0x00007000); (*(pREG32 (0x50003FFC)))
+
+		//The following prepares the sector for writing, erases it, prepares again and writes flashValues into the flashValues
+		//Its 0 at the moment so its not flashed every time the chip powers up, that'd be wasteful
+		//After its flashed once, it can be read again later so yeah, its been disabled for now
+		#if 0
+		//Prepare for write
+		iapCommand[0]=50;	//command to prepare
+		iapCommand[1]=7;	//From sector 7
+		iapCommand[2]=7;	//To sector 7
+		iap_entry (iapCommand, iapResult); //send the commands
+		delay(1);
+
+		//Erase
+		iapCommand[0]=52; //Command to erase
+		iapCommand[1]=7;	//From sector 7
+		iapCommand[2]=7;	//To sector 7
+		iapCommand[3]=48000;	//Clock rate in khz 
+		iap_entry (iapCommand, iapResult); //send the commands
+		delay(120); //wait for it to be done
+
+		//Prepare for write
+		iapCommand[0]=50;
+		iapCommand[1]=7;
+		iapCommand[2]=7;
+		iap_entry (iapCommand, iapResult);
+		delay(1);
+
+		//Setting up some test values to put to flash (counting down from 64)
+		uint32_t flashValues[64];
+		for(i=0; i<64; i++){
+		    flashValues[i]=64-i;
+
+		}
+
+		//Write
+		iapCommand[0]=51;	//Write to flash command
+		iapCommand[1]=0x00007000; //Write starting from this flash address
+		iapCommand[2]=&flashValues; //Read from this memory address
+		iapCommand[3]=256;	//256 bytes is the minimum size we can write to at once
+		iapCommand[4]=48000;	//clock speed in khz - 48000
+		iap_entry (iapCommand, iapResult);
+		//	  0x00007000
+		//__enable_irq();
+		#endif
+
+
+		//PrintUint(BinaryVariable); //This function can convert a 32 bit unsigned int and print it as binary over UART
+		j=0;
+		
+	  while ( 1 )
+	{ //Loop, runs at 5Hz
+		    delay(100);
+
+#if 0 
+		//Printing out the time offset from timesyncing
+		FetchData(0, &tmpDataHold, &tmpTimeHold);
+		SCANDAL_Send(7, 0, 61, 0, SCANDALClockOffset);
 #endif
+
+		sprintf(UARTBUFF, "%3d - IAP: St:%d R1:%d R2:%d R3:%d, RV:%u\r\n", j, iapResult[0], iapResult[1], iapResult[2], iapResult[3], *(regReadVal+(j%64)));
+		for( i = 0; UARTBUFF[i] !='\0'; i++)
+		{
+		    UARTSend( &UARTBUFF[i], 1 ); //(uint8_t *)
+		}
+		j++;
+		
 #if 0
-					RdNum = 1;
+		    RdNum = 1;
 
-					sprintf(UARTBUFF, "Obj%u - %x, %x, %x, %x, %x, D-%d\r\n", RdNum, can_buff[RdNum].id, can_buff[RdNum].data[0], can_buff[RdNum].data[1], can_buff[RdNum].data[2], can_buff[RdNum].data[3], CANRxDone[RdNum]);
-					for( i = 0; UARTBUFF[i] !='\0'; i++)
-					{
-						UARTSend( &UARTBUFF[i], 1 ); //(uint8_t *)
-					}
+		    sprintf(UARTBUFF, "Obj%u - %x, %x, %x, %x, %x, D-%d\r\n", RdNum, can_buff[RdNum].id, can_buff[RdNum].data[0], can_buff[RdNum].data[1], can_buff[RdNum].data[2], can_buff[RdNum].data[3], CANRxDone[RdNum]);
+		    for( i = 0; UARTBUFF[i] !='\0'; i++)
+		    {
+			  UARTSend( &UARTBUFF[i], 1 ); //(uint8_t *)
+		    }
 #endif
 
 
 #if 0
-					for(j=0; j<20; j++)
-					{
-						if (CANRxDone[j]==1)
-						{
+		    for(j=0; j<20; j++)
+		    {
+			  if (CANRxDone[j]==1)
+			  {
 
-							RdNum = j;
+				    RdNum = j;
 
-							sprintf(UARTBUFF, "Obj%1u - %8x,D %10d,TS %10u\r\n", RdNum, can_buff[RdNum].id, (can_buff[RdNum].data[0]<<16) | can_buff[RdNum].data[1], (can_buff[RdNum].data[2]<<16) | can_buff[RdNum].data[3]);
-							for( i = 0; UARTBUFF[i] !='\0'; i++){
-							UARTSend( &UARTBUFF[i], 1 ); //(uint8_t *)
-							}
-							CANRxDone[j]=0;
+				    sprintf(UARTBUFF, "Obj%1u - %8x,D %10d,TS %10u\r\n", RdNum, can_buff[RdNum].id, (can_buff[RdNum].data[0]<<16) | can_buff[RdNum].data[1], (can_buff[RdNum].data[2]<<16) | can_buff[RdNum].data[3]);
+				    for( i = 0; UARTBUFF[i] !='\0'; i++){
+				    UARTSend( &UARTBUFF[i], 1 ); //(uint8_t *)
+				    }
+				    CANRxDone[j]=0;
 
 
-						}
+			  }
 
-					}
+		    }
 #endif
 
-					//CAN_MessageProcess(RdNum);
+		    //CAN_MessageProcess(RdNum);
 
 
-					/*
-					for( i = 0; UARTBUFF[i] !='\0'; i++){
-						UARTSend( &UARTBUFF[i], 1 ); //(uint8_t *)
-					}*/
+		    /*
+		    for( i = 0; UARTBUFF[i] !='\0'; i++){
+			  UARTSend( &UARTBUFF[i], 1 ); //(uint8_t *)
+		    }*/
 
 /*
  * Print out the can frame in Hex:

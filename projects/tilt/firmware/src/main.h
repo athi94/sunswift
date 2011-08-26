@@ -20,6 +20,10 @@ float kalman_update(float gyro_rate, float accel_angle, float dT);
 
 #define Pi 3.141592653589793 // The glorious Pi!
 
+//IAP (In Application Programming aka - WRITING TO FLASH stuff):
+#define IAP_LOCATION 0x1fff1ff1 //<- Defines where to send the commands to
+//See page 312 of "LPC111x/LPC11Cxx User manual"
+
 void clrbuf(void);
 void i2cdebug(void);
 void readsensors(void);
