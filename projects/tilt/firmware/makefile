@@ -35,13 +35,13 @@ LINKSCRIPT=lpc1114_flash_can_crp.ld
 STARTUPSCRIPT = cr_startup_lpc11
 
 OBJECTS  = $(PROJECT).o scandal_obligations.o
-OBJECTS += core_cm0.o system_LPC11xx.o
+OBJECTS += core_cm0.o system_LPC11xx.o leds.o
 OBJECTS += gpio.o timer32.o uart.o can.o i2c.o flash.o
 OBJECTS += engine.o error.o manager.o maths.o message.o utils.o
 OBJECTS += $(STARTUPSCRIPT).o
 
 #compiler flags
-OPTIMISATION =  3 # we need this to fit our code in the flash at the moment :-(
+OPTIMISATION = s # we need this to fit our code in the flash at the moment :-(
 DEBUG = 
 
 CFLAGS  = -mcpu=$(MCU) -DLPC11C14 -D__NEWLIB__ -D__USE_CMSIS -D__CODE_RED -mthumb -O$(OPTIMISATION) $(DEBUG)
@@ -68,6 +68,9 @@ $(PROJECT).o: src/$(PROJECT).c
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 scandal_obligations.o: src/scandal_obligations.c
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
+
+leds.o: src/leds.c
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 core_cm0.o: $(CMSIS)/core_cm0.c
@@ -117,8 +120,8 @@ $(STARTUPSCRIPT).o: $(STARTUP)/$(STARTUPSCRIPT).c
 
 program: $(PROJECT).axf
 	@# see http://support.code-red-tech.com/CodeRedWiki/CommandLineFlashProgramming
-	-$(START_PROGRAMMER) -d 0x471:0xdf55 -c 0 -t 2048 -R -D $(UTILS)/LPCXpressoWIN.enc
-	@sleep 1
+	#-$(START_PROGRAMMER) -d 0x471:0xdf55 -c 0 -t 2048 -R -D $(UTILS)/LPCXpressoWIN.enc
+	#@sleep 1
 	@#program using .axf
 	$(FLASH_CHIP) -wire=winusb -p$(UC) -flash-load-exec=$(BUILD)/$(PROJECT).axf
 	@#program using .bin, doesn't seem to work atm

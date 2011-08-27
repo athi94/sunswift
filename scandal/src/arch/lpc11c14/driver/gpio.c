@@ -20,6 +20,7 @@
  * use without further testing or modification.
 ****************************************************************************/
 #include <project/driver_config.h>
+
 #if CONFIG_ENABLE_DRIVER_GPIO==1
 
 #include <arch/gpio.h>

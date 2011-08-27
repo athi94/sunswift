@@ -28,10 +28,46 @@
 #include <arch/i2c.h>
 #include <math.h>
 
-int main (void)
+#include <scandal/timer.h>
+
+void setup_ports(void) {
+	// Initializing the GPIO's
+	GPIOInit();
+
+	// LEDs
+	GPIOSetDir(2,8,1); //Green LED, Out
+	//GPIOSetValue(2,8,0); //Green LED, Low (on)
+	//GPIOSetValue(2,8,1); //Green LED, High (off)
+
+	GPIOSetDir(2,7,1); //Yel LED, Out
+	//GPIOSetValue(2,7,0); //Yel LED, Low (on)
+	//GPIOSetValue(2,7,1); //Yel LED, Low (off)
+}
+
+int main(void)
 {
+	sc_time_t my_timer = sc_get_timer();
+
+	setup_ports();
+
 	scandal_init();
 
-	/* this file needs to be fleshed out... */
+	UARTInit(115200); //Init UART at 115200bps
 
+	red_led(1);
+	yellow_led(1);
+
+	int i = 0;
+
+	UART_printf("Welcome to the template project! This is coming out over UART1\n\r");
+	UART_printf("The 2 debug LEDs should blink at a rate of 1HZ\n\r");
+
+	while (1) {
+		if(sc_get_timer() >= my_timer + 1000) {
+			UART_printf("This is the 1 second timer... %d\n\r", i++);
+			my_timer = sc_get_timer();
+			toggle_yellow_led();
+			toggle_red_led();
+		}
+	}
 }

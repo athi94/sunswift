@@ -1,22 +1,3 @@
-/****************************************************************************
- *   $Id:: i2c_main.c 4785 2010-09-03 22:39:27Z nxp21346                    $
- *   Project: NXP LPC11xx I2C example
- *
- *   Description:
- *     This file contains I2C test modules, main entry, to test I2C APIs.
- *
- ****************************************************************************
- * Software that is described herein is for illustrative purposes only
- * which provides customers with programming information regarding the
- * products. This software is supplied "AS IS" without any warranties.
- * NXP Semiconductors assumes no responsibility or liability for the
- * use of the software, conveys no license or title under any patent,
- * copyright, or mask work right to the product. NXP Semiconductors
- * reserves the right to make changes in the software without
- * notification. NXP Semiconductors also make no representation or
- * warranty that such application will be suitable for the specified
- * use without further testing or modification.
-****************************************************************************/
 #include <project/driver_config.h>
 #include <project/target_config.h>
 
@@ -62,17 +43,8 @@ volatile int32_t Acc_DiffV=0;
 volatile int32_t Acc_LastV=0;
 volatile uint32_t Acc_DiffT=0;
 volatile uint32_t Acc_LastT=0;
-/*******************************************************************************
-**   Main Function  main()
-*******************************************************************************/
-//int __main();
-int main (void)
-{
-	scandal_init();
 
-	init_timer32PWM(1, 1463, 2);
-	enable_timer32(1);
-
+void setup_ports(void) {
 	// Initializing the GPIO's
 	GPIOInit();
 	// Setting Port 0.7 as an output; Format:(Port (0), Bit (7), In(0)/Out (1))
@@ -80,16 +52,30 @@ int main (void)
 	GPIOSetDir(2,11,0);
 	//gpioGetValue (2, 11);
 
-	//Blink LED's on built board
+	GPIOSetDir(2,9,0); //Magnetometer interrupt in
+	
+	// LEDs
 	GPIOSetDir(2,8,1); //Green LED, Out
-	GPIOSetValue(2,8,0); //Green LED, Low (on)
-	GPIOSetValue(2,8,1); //Green LED, High (off)
+	//GPIOSetValue(2,8,0); //Green LED, Low (on)
+	//GPIOSetValue(2,8,1); //Green LED, High (off)
 
 	GPIOSetDir(2,7,1); //Yel LED, Out
-	GPIOSetValue(2,7,0); //Yel LED, Low (on)
-	GPIOSetValue(2,7,1); //Yel LED, Low (off)
+	//GPIOSetValue(2,7,0); //Yel LED, Low (on)
+	//GPIOSetValue(2,7,1); //Yel LED, Low (off)
+}
 
-	GPIOSetDir(2,9,0); //Magnetometer interrupt in
+/*******************************************************************************
+**   Main Function  main()
+*******************************************************************************/
+//int __main();
+int main (void)
+{
+	setup_ports();
+	scandal_init();
+
+	init_timer32PWM(1, 1463, 2);
+	enable_timer32(1);
+
 
 #if ENABLE_CAN
 
@@ -300,8 +286,7 @@ int main (void)
 		//PrintUint(BinaryVariable); //This function can convert a 32 bit unsigned int and print it as binary over UART
 		j=0;
 		
-	  while ( 1 )
-	{ //Loop, runs at 5Hz
+	  while ( 1 ) { //Loop, runs at 5Hz
 		    delay(100);
 
 #if 0 

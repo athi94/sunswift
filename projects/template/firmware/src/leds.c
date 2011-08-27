@@ -1,11 +1,11 @@
 /* --------------------------------------------------------------------------
 	Scandal Engine
-	File name: scandal_led.h
-	Author: David Snowdon
+	File name: led.c
+	Author: Etienne Le Sueur
  
-    Copyright (C) 2002 David Snowdon.
+    Copyright (C) 2011 Etienne Le Sueur.
 
-	Date: 14/08/02
+	Date: 29/08/2011
    -------------------------------------------------------------------------- */ 
 
 /* 
@@ -27,8 +27,30 @@
 
 #include <scandal/types.h>
 
-void red_led(u08 on);
-void toggle_red_led(void);
+#include <project/driver_config.h>
+#include <project/target_config.h>
 
-void yellow_led(u08 on);
-void toggle_yellow_led(void);
+#include <arch/gpio.h>
+
+void red_led(u08 on) {
+	if (on)
+		GPIOSetValue(2,8,0);
+	else
+		GPIOSetValue(2,8,1);
+}
+
+void toggle_red_led(void) {
+	LPC_GPIO[RED_LED_PORT]->MASKED_ACCESS[(1<<RED_LED_BIT)] ^= (1<<RED_LED_BIT);
+}
+
+void yellow_led(u08 on) {
+	if (on)
+		GPIOSetValue(2,7,0);
+	else
+		GPIOSetValue(2,7,1);
+}
+
+void toggle_yellow_led(void) {
+	LPC_GPIO[YELLOW_LED_PORT]->MASKED_ACCESS[(1<<YELLOW_LED_BIT)] ^= (1<<YELLOW_LED_BIT);
+}
+
