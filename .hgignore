@@ -10,3 +10,4 @@ syntax: glob
 *.elf
 *.map
 *.swp
+*.orig
