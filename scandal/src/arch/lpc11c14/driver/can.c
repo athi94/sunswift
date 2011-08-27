@@ -69,12 +69,6 @@ uint32_t CANStatusLog[100];
 uint32_t CANStatusLogCount = 0;
 #endif
 
-extern volatile float Acceleration; //To store the acceleration of the car for subtraction by the accelerometer
-extern volatile int32_t Acc_DiffV;
-extern volatile int32_t Acc_LastV;
-extern volatile uint32_t Acc_DiffT;
-extern volatile uint32_t Acc_LastT;
-
 /* Scandal wrappers
  * *****************/
 
@@ -162,35 +156,17 @@ void FetchHeaders(uint8_t MsgNum, uint16_t *Pri, uint16_t *MsgType, uint16_t *No
  * FetchHeaders returns uint16 for Pri, MsgType, NodAddr, Chnl_NodTyp
  */
 void ProcessReceived(uint8_t MsgNum){
-		int32_t DataHold=0;
-		uint32_t TimeHold=0;
+	int32_t DataHold=0;
+	uint32_t TimeHold=0;
 
 	switch(MsgNum){
 		case 0: //Timesync
-		    FetchData(MsgNum, &DataHold, &TimeHold);
-		    SCANDALClockOffset=TimeHold-timer32_0_counter;
-		    break;
-
-		case 1: //Velocity, google about redeclaring static variables
 			FetchData(MsgNum, &DataHold, &TimeHold);
-
-			Acc_DiffV=DataHold-Acc_LastV;
-			Acc_DiffT=TimeHold-Acc_LastT;
-			
-			if((Acc_DiffT>0) && (Acc_DiffT < 2000)){
-				Acceleration = ((float) Acc_DiffV) / (((float) 3.6) * ((float) Acc_DiffT));
-			}
-
-			Acc_LastT=TimeHold;
-			Acc_LastV=DataHold;
-
+			SCANDALClockOffset=TimeHold-timer32_0_counter;
 			break;
-
 		default:
-
 			break;
 		}
-
 }
 
 /*****************************************************************************

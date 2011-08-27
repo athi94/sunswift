@@ -8,7 +8,7 @@
 MEMORY
 {
   /* Define each memory region */
-  MFlash32 (rx) : ORIGIN = 0x0, LENGTH = 0x7000 /* 32k */
+  MFlash32 (rx) : ORIGIN = 0x0, LENGTH = 0x7000 /* 28k with 4k for config space */
   RamLoc8 (rwx) : ORIGIN = 0x10000100, LENGTH = 0x1F00 /* 8k-256bytes */
 
 }

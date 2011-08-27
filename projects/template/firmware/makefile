@@ -27,17 +27,21 @@ UC = LPC11C14/301
 #define files
 PROJECT = main
 
-LINKSCRIPT = lpc1114_flash_crp.ld
+#LINKSCRIPT = lpc1114_flash_crp.ld
+LINKSCRIPT=lpc1114_flash_can_crp.ld
+#Should LINKSCRIPT=lpc1114_flash_can_crp.ld, It is slightly different in terms of memory management
+#Changed on 23 Aug - Charith, saw something in the user manual to do with some black of memory at the
+#top being required by the CAN controller
 STARTUPSCRIPT = cr_startup_lpc11
 
 OBJECTS  = $(PROJECT).o scandal_obligations.o
-OBJECTS += core_cm0.o system_LPC11xx.o
+OBJECTS += core_cm0.o system_LPC11xx.o leds.o
 OBJECTS += gpio.o timer32.o uart.o can.o i2c.o flash.o
 OBJECTS += engine.o error.o manager.o maths.o message.o utils.o
 OBJECTS += $(STARTUPSCRIPT).o
 
 #compiler flags
-OPTIMISATION =  3 # we need this to fit our code in the flash at the moment :-(
+OPTIMISATION = s # we need this to fit our code in the flash at the moment :-(
 DEBUG = 
 
 CFLAGS  = -mcpu=$(MCU) -DLPC11C14 -D__NEWLIB__ -D__USE_CMSIS -D__CODE_RED -mthumb -O$(OPTIMISATION) $(DEBUG)
@@ -55,64 +59,88 @@ LFLAGS  = -nostdlib  -Xlinker -Map=$(BUILD)/$(PROJECT).map -Xlinker --gc-section
 all: $(PROJECT).axf $(PROJECT).bin
 
 $(PROJECT).axf: $(OBJECTS)
+	@echo "[LINK] $(PROJECT).axf"
 	@$(CC) $(CFLAGS) $(LFLAGS) $(addprefix $(BUILD)/,$(OBJECTS)) -o $(BUILD)/$(PROJECT).axf 
 
 ###compile object files individually
 $(PROJECT).o: src/$(PROJECT).c
 	@mkdir -p $(BUILD)
+	@echo "[CC] $(PROJECT).c"
 	@if [ "$(BUILD)" == "." ]; then echo -e "\033[91mDon't use . as BUILD\033[0m"; exit 1; fi
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 scandal_obligations.o: src/scandal_obligations.c
+	@echo "[CC] scandal_obligations.c"
+	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
+
+leds.o: src/leds.c
+	@echo "[CC] leds.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 core_cm0.o: $(CMSIS)/core_cm0.c
+	@echo "[CC] core_cm0.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 engine.o: $(SCANDAL)/src/engine.c
+	@echo "[CC] scandal/engine.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 error.o: $(SCANDAL)/src/error.c
+	@echo "[CC] scandal/error.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 manager.o: $(SCANDAL)/src/manager.c
+	@echo "[CC] scandal/manager.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 message.o: $(SCANDAL)/src/message.c
+	@echo "[CC] scandal/message.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 utils.o: $(SCANDAL)/src/utils.c
+	@echo "[CC] scandal/utils.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 maths.o: $(SCANDAL)/src/maths.c
+	@echo "[CC] scandal/maths.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 system_LPC11xx.o: $(CMSIS)/system_LPC11xx.c
+	@echo "[CC] cmsis/system_LPC11xx.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 gpio.o: $(DRIVERS)/gpio.c
+	@echo "[CC] cmsis/gpio.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 timer32.o: $(DRIVERS)/timer32.c
+	@echo "[CC] cmsis/timer32.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 uart.o: $(DRIVERS)/uart.c
+	@echo "[CC] cmsis/uart.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 can.o: $(DRIVERS)/can.c
+	@echo "[CC] cmsis/can.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 flash.o: $(DRIVERS)/flash.c
+	@echo "[CC] cmsis/flash.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 i2c.o: $(DRIVERS)/i2c.c
+	@echo "[CC] cmsis/i2c.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 $(STARTUPSCRIPT).o: $(STARTUP)/$(STARTUPSCRIPT).c
+	@echo "[CC] startup.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 program: $(PROJECT).axf
-	@# see http://support.code-red-tech.com/CodeRedWiki/CommandLineFlashProgramming
+	@echo "[PROGRAM] $(PROJECT).axf"
+	@# this is needed to put the LPCXpresso programmer into a different mode. It comes up as a different USB device.
+	@# In vmware fusion, you will need to reconnect it as the CodeRed programmer that comes up.
 	-$(START_PROGRAMMER) -d 0x471:0xdf55 -c 0 -t 2048 -R -D $(UTILS)/LPCXpressoWIN.enc
 	@sleep 1
 	@#program using .axf
@@ -121,11 +149,16 @@ program: $(PROJECT).axf
 	@#sudo $(FLASH_CHIP) -wire=winusb -p$(UC) -flash-load=$(BUILD)/$(PROJECT).bin -load-base=0x0000
 
 clean:
+	@echo "[CLEAN] $(BUILD)"
 	@if [ "$(BUILD)" == "." ]; then echo -e "\033[91mDon't use . as BUILD\033[0m"; exit 1; fi
 	@rm -Rf $(BUILD)
 
 $(PROJECT).bin: $(PROJECT).axf
+	@echo "[SIZE] $(PROJECT).axf"
 	@$(SIZE) $(BUILD)/$(PROJECT).axf; 
-	$(OBJCOPY) -O binary $(BUILD)/$(PROJECT).axf $(BUILD)/$(PROJECT).bin;
-	$(CHECKSUM) -p $(UC) -d $(BUILD)/$(PROJECT).bin;
+	@echo "[GEN] $(PROJECT).bin"
+	@$(OBJCOPY) -O binary $(BUILD)/$(PROJECT).axf $(BUILD)/$(PROJECT).bin;
+	@echo "[CHECKSUM] $(PROJECT).bin"
+	@echo -ne "   "
+	@$(CHECKSUM) -p $(UC) -d $(BUILD)/$(PROJECT).bin;
 	@echo
