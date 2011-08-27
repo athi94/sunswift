@@ -11,3 +11,4 @@ syntax: glob
 *.map
 *.swp
 *.orig
+*/Project Outputs*
