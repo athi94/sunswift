@@ -178,7 +178,6 @@ extern void CAN_MessageProcess( uint8_t MsgObjNo );
 void CAN_Send(uint16_t Pri, can_msg *msg);
 extern void CAN_MsgConfigParam(uint8_t msg_no, uint8_t *eob, uint32_t *filtermask, uint32_t *filteraddr);
 
-extern void FlipValues(uint32_t Input, uint32_t *D1, uint32_t *D2);
 extern void FetchData(uint8_t MsgNum, int32_t *DataPointer, uint32_t *TimePointer);
 extern void FetchHeaders(uint8_t MsgNum, uint16_t *Pri, uint16_t *MsgType, uint16_t *NodAddr, uint16_t *Chnl_NodTyp);
 extern void ProcessReceived(uint8_t MsgNum);

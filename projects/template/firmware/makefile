@@ -24,9 +24,6 @@ CHECKSUM = checksum
 MCU = cortex-m0
 UC = LPC11C14/301
 
-#define files
-PROJECT = main
-
 #LINKSCRIPT = lpc1114_flash_crp.ld
 LINKSCRIPT=lpc1114_flash_can_crp.ld
 #Should LINKSCRIPT=lpc1114_flash_can_crp.ld, It is slightly different in terms of memory management
@@ -34,7 +31,7 @@ LINKSCRIPT=lpc1114_flash_can_crp.ld
 #top being required by the CAN controller
 STARTUPSCRIPT = cr_startup_lpc11
 
-OBJECTS  = $(PROJECT).o scandal_obligations.o
+OBJECTS  = main.o scandal_obligations.o
 OBJECTS += core_cm0.o system_LPC11xx.o leds.o
 OBJECTS += gpio.o timer32.o uart.o can.o i2c.o flash.o
 OBJECTS += engine.o error.o manager.o maths.o message.o utils.o
@@ -52,29 +49,29 @@ CFLAGS += -I./include # for project includes
 CFLAGS += -lm #Added lm for math.h
 
 LSCRIPT = $(LINKER)/$(LINKSCRIPT)
-LFLAGS  = -nostdlib  -Xlinker -Map=$(BUILD)/$(PROJECT).map -Xlinker --gc-sections -L $(LINKER) -T "$(LSCRIPT)"
+LFLAGS  = -nostdlib  -Xlinker -Map=$(BUILD)/main.map -Xlinker --gc-sections -L $(LINKER) -T "$(LSCRIPT)"
 
 .PHONY: all clean program
 
-all: $(PROJECT).axf $(PROJECT).bin
+all: main.axf main.bin
 
-$(PROJECT).axf: $(OBJECTS)
-	@echo "[LINK] $(PROJECT).axf"
-	@$(CC) $(CFLAGS) $(LFLAGS) $(addprefix $(BUILD)/,$(OBJECTS)) -o $(BUILD)/$(PROJECT).axf 
+main.axf: $(OBJECTS)
+	@echo "[LINK] main.axf"
+	@$(CC) $(CFLAGS) $(LFLAGS) $(addprefix $(BUILD)/,$(OBJECTS)) -o $(BUILD)/main.axf 
 
 ###compile object files individually
-$(PROJECT).o: src/$(PROJECT).c
+main.o: src/main.c
 	@mkdir -p $(BUILD)
-	@echo "[CC] $(PROJECT).c"
+	@echo "[CC] main.c                      this is where your main loop is!"
 	@if [ "$(BUILD)" == "." ]; then echo -e "\033[91mDon't use . as BUILD\033[0m"; exit 1; fi
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 scandal_obligations.o: src/scandal_obligations.c
-	@echo "[CC] scandal_obligations.c"
+	@echo "[CC] scandal_obligations.c       this is where some local scandal implementations are"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 leds.o: src/leds.c
-	@echo "[CC] leds.c"
+	@echo "[CC] leds.c                      this is your LED routines"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 core_cm0.o: $(CMSIS)/core_cm0.c
@@ -82,27 +79,27 @@ core_cm0.o: $(CMSIS)/core_cm0.c
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 engine.o: $(SCANDAL)/src/engine.c
-	@echo "[CC] scandal/engine.c"
+	@echo "[CC] scandal/engine.c            this is some core scandal stuff"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 error.o: $(SCANDAL)/src/error.c
-	@echo "[CC] scandal/error.c"
+	@echo "[CC] scandal/error.c             this is some scandal error handling code"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 manager.o: $(SCANDAL)/src/manager.c
-	@echo "[CC] scandal/manager.c"
+	@echo "[CC] scandal/manager.c           this some of scandal helper code"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 message.o: $(SCANDAL)/src/message.c
-	@echo "[CC] scandal/message.c"
+	@echo "[CC] scandal/message.c           this is where scandal builds CAN messages"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 utils.o: $(SCANDAL)/src/utils.c
-	@echo "[CC] scandal/utils.c"
+	@echo "[CC] scandal/utils.c             this may have some useful helper functions"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 maths.o: $(SCANDAL)/src/maths.c
-	@echo "[CC] scandal/maths.c"
+	@echo "[CC] scandal/maths.c             this may have some useful math functions"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 system_LPC11xx.o: $(CMSIS)/system_LPC11xx.c
@@ -110,55 +107,78 @@ system_LPC11xx.o: $(CMSIS)/system_LPC11xx.c
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 gpio.o: $(DRIVERS)/gpio.c
-	@echo "[CC] cmsis/gpio.c"
+	@echo "[CC] cmsis/gpio.c                this is the LPC GPIO driver"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 timer32.o: $(DRIVERS)/timer32.c
-	@echo "[CC] cmsis/timer32.c"
+	@echo "[CC] cmsis/timer32.c             this is the LPC timer driver"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 uart.o: $(DRIVERS)/uart.c
-	@echo "[CC] cmsis/uart.c"
+	@echo "[CC] cmsis/uart.c                this is the LPC UART driver"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 can.o: $(DRIVERS)/can.c
-	@echo "[CC] cmsis/can.c"
+	@echo "[CC] cmsis/can.c                 this is the LPC CAN driver"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 flash.o: $(DRIVERS)/flash.c
-	@echo "[CC] cmsis/flash.c"
+	@echo "[CC] cmsis/flash.c               this is the LPC flash driver"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 i2c.o: $(DRIVERS)/i2c.c
-	@echo "[CC] cmsis/i2c.c"
+	@echo "[CC] cmsis/i2c.c                 this is the LPC I2C driver"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
 $(STARTUPSCRIPT).o: $(STARTUP)/$(STARTUPSCRIPT).c
 	@echo "[CC] startup.c"
 	@$(CC) $(CFLAGS) -c -o $(BUILD)/$@ $<
 
-program: $(PROJECT).axf
-	@echo "[PROGRAM] $(PROJECT).axf"
-	@# this is needed to put the LPCXpresso programmer into a different mode. It comes up as a different USB device.
-	@# In vmware fusion, you will need to reconnect it as the CodeRed programmer that comes up.
-	-$(START_PROGRAMMER) -d 0x471:0xdf55 -c 0 -t 2048 -R -D $(UTILS)/LPCXpressoWIN.enc
-	@sleep 1
-	@#program using .axf
-	$(FLASH_CHIP) -wire=winusb -p$(UC) -flash-load-exec=$(BUILD)/$(PROJECT).axf
-	@#program using .bin, doesn't seem to work atm
-	@#sudo $(FLASH_CHIP) -wire=winusb -p$(UC) -flash-load=$(BUILD)/$(PROJECT).bin -load-base=0x0000
+
+program: main.axf
+	@echo "[PROGRAM] main.axf               this is what gets flashed to the target"
+
+	@echo "[PROGRAM]  checking for programmer...";
+	@-lsusb | grep -q "df55"; \
+	if [ $$? -eq 0 ]; then \
+		echo "[PROGRAM]   detected LPC Expresso, setting to programmer mode..."; \
+		echo -e "\033[91m[PROGRAM]    If in VMware Fusion, you may need to reattach the CodeRed device...\033[0m"; \
+		if [ -x "$(START_PROGRAMMER)" ]; then \
+			$(START_PROGRAMMER) -d 0x471:0xdf55 -c 0 -t 2048 -R -D $(UTILS)/LPCXpressoWIN.enc > /dev/null 2>&1; \
+			if [ $$? -ne 0 ]; then \
+				echo -e "\033[91m[PROGRAM]    dfu-util failed to change programmer mode!\033[0m"; \
+			fi; \
+		else \
+			echo -e "\033[91m[PROGRAM]    dfu-util doesn't exist in path!\033[0m"; \
+		fi; \
+		sleep 1; \
+	else \
+		lsusb | grep -q "1fc9:0009"; \
+		if [ $$? -ne 0 ]; then \
+			echo -e "\033[91m[PROGRAM]    No programmer detected!\033[0m"; \
+		fi; \
+	fi
+
+	@lsusb | grep -q "1fc9:0009"; \
+	if [ $$? -eq 0 ]; then \
+		echo -e "\033[91m[PROGRAM]   detected LPC Expresso in correct mode, attempting program\033[0m"; \
+		$(FLASH_CHIP) -wire=winusb -p$(UC) -flash-load-exec=$(BUILD)/main.axf > /dev/null 2>&1; \
+	fi
+
+#program using .bin, doesn't seem to work atm
+#sudo $(FLASH_CHIP) -wire=winusb -p$(UC) -flash-load=$(BUILD)/main.bin -load-base=0x0000
 
 clean:
 	@echo "[CLEAN] $(BUILD)"
 	@if [ "$(BUILD)" == "." ]; then echo -e "\033[91mDon't use . as BUILD\033[0m"; exit 1; fi
 	@rm -Rf $(BUILD)
 
-$(PROJECT).bin: $(PROJECT).axf
-	@echo "[SIZE] $(PROJECT).axf"
-	@$(SIZE) $(BUILD)/$(PROJECT).axf; 
-	@echo "[GEN] $(PROJECT).bin"
-	@$(OBJCOPY) -O binary $(BUILD)/$(PROJECT).axf $(BUILD)/$(PROJECT).bin;
-	@echo "[CHECKSUM] $(PROJECT).bin"
+main.bin: main.axf
+	@echo "[SIZE] main.axf"
+	@$(SIZE) $(BUILD)/main.axf; 
+	@echo "[GEN] main.bin"
+	@$(OBJCOPY) -O binary $(BUILD)/main.axf $(BUILD)/main.bin;
+	@echo "[CHECKSUM] main.bin"
 	@echo -ne "   "
-	@$(CHECKSUM) -p $(UC) -d $(BUILD)/$(PROJECT).bin;
+	@$(CHECKSUM) -p $(UC) -d $(BUILD)/main.bin;
 	@echo

@@ -39,14 +39,16 @@
  */
 #include <project/driver_config.h>
 
-#if CONFIG_ENABLE_DRIVER_CAN==1
-
-#include <string.h>
+#include <string.h> /* for memcpy */
 
 #include <arch/can.h>
 #include <arch/gpio.h>
 #include <arch/timer32.h>
+
+#ifdef CAN_UART_DEBUG
+#warning CAN_UART debugging is enabled. If you need the UART for something else, you need to disable this in project_config.h.
 #include <arch/uart.h>
+#endif
 
 #include <scandal/can.h>
 #include <scandal/error.h>
@@ -92,38 +94,18 @@ u08 can_register_id(u32 mask, u32 data, u08 priority) {
 	return 0;
 }
 
-/*! Should be called when the CAN controller has an interrupt */
-/*! \todo This is probably not the right location for this */
-void can_interrupt(void) {
-
-}
-
-/*! Should be called when there is idle time available and the CAN
-	controller is able to do some housekeeping */
-void can_poll(void) {
-
-}
-
 /* Parameter settings */
 u08  can_baud_rate(u08 mode) {
 	return 0;
 }
 
-/* Enable and disable CAN interrupts */
-void  enable_can_interrupt(void) {
-
-}
-
-void  disable_can_interrupt(void) {
+void can_poll(void) {
 
 }
 
 /* *******************
  * End Scandal wrappers
  */
-
-
-
 
 void FetchData(uint8_t MsgNum, int32_t *DataPointer, uint32_t *TimePointer){
 
@@ -160,10 +142,12 @@ void ProcessReceived(uint8_t MsgNum){
 
 	switch(MsgNum) {
 		case 0: //Timesync
-			UART_printf("Got a timesync packet!\n\r");
 			FetchData(MsgNum, &DataHold, &TimeHold);
 			timesync_time = (((uint64_t)DataHold)<<32) & TimeHold;
-			scandal_set_realtime(TimeHold);
+			scandal_set_realtime(timesync_time);
+#ifdef CAN_UART_DEBUG
+			UART_printf("[CAN DEBUG]: Got a timesync packet!\n\r");
+#endif
 			break;
 
 		default:
@@ -846,4 +830,3 @@ uint8_t BufferCheck(uint8_t ToCheck){
 	return ret;
 
 }
-#endif
