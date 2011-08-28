@@ -32,6 +32,10 @@
 
 #include <arch/gpio.h>
 
+/* this is using two different levels of abstraction to twiddle the LEDs. We can
+ * probably go even further up down thr rabbit hole to just modifying registers
+ */
+
 void red_led(u08 on) {
 	if (on)
 		GPIOSetValue(2,8,0);
