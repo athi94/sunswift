@@ -41,10 +41,16 @@
 
 #if CONFIG_ENABLE_DRIVER_CAN==1
 
+#include <string.h>
+
 #include <arch/can.h>
 #include <arch/gpio.h>
 #include <arch/timer32.h>
 #include <arch/uart.h>
+
+#include <scandal/can.h>
+#include <scandal/error.h>
+#include <scandal/timer.h>
 
 #define CUSTOM_CONFIG 1
 #define REORDER_DATA 1
@@ -53,17 +59,9 @@ volatile uint32_t BOffCnt = 0;
 volatile uint32_t EWarnCnt = 0;
 volatile uint32_t EPassCnt = 0;
 
-
-//UART Prototyping stuff:
-
-extern volatile uint32_t UARTCount;
-char UARTBUFF[128];
-#define UART_DEBUG_CAN 1
-
 uint32_t CANRxDone[MSG_OBJ_MAX];
 
 message_object can_buff[MSG_OBJ_MAX];
-int32_t SCANDALClockOffset=0;
 #if CAN_DEBUG
 uint32_t CANStatusLog[100];
 uint32_t CANStatusLogCount = 0;
@@ -72,26 +70,25 @@ uint32_t CANStatusLogCount = 0;
 /* Scandal wrappers
  * *****************/
 
-#include <scandal/can.h>
-
 void init_can(void) {
-
+	CAN_Init(BITRATE50K16MHZ);
 }
 
 /*! Get a message from the CAN controller. */
-u08  can_get_msg(can_msg* msg) {
-	return 0;
+u08 can_get_msg(can_msg* msg) {
+	return NO_MSG_ERR;
 }
 
 /*! Send a message using the CAN controller */
-u08  can_send_msg(can_msg* msg, u08 priority) {
-	return 0;
+u08 can_send_msg(can_msg *msg, u08 priority) {
+	CAN_Send((uint16_t)priority, msg);
+	return NO_MSG_ERR;
 }
 
 /*! Register a message ID/mask. This guarantees that these messages will
   not be filtered out by hardware filters. Other messages are not
   guaranteed */
-u08  can_register_id(u32 mask, u32 data, u08 priority) {
+u08 can_register_id(u32 mask, u32 data, u08 priority) {
 	return 0;
 }
 
@@ -156,14 +153,19 @@ void FetchHeaders(uint8_t MsgNum, uint16_t *Pri, uint16_t *MsgType, uint16_t *No
  * FetchHeaders returns uint16 for Pri, MsgType, NodAddr, Chnl_NodTyp
  */
 void ProcessReceived(uint8_t MsgNum){
-	int32_t DataHold=0;
-	uint32_t TimeHold=0;
 
-	switch(MsgNum){
+	int32_t DataHold = 0;
+	uint32_t TimeHold = 0;
+	uint64_t timesync_time = 0;
+
+	switch(MsgNum) {
 		case 0: //Timesync
+			UART_printf("Got a timesync packet!\n\r");
 			FetchData(MsgNum, &DataHold, &TimeHold);
-			SCANDALClockOffset=TimeHold-timer32_0_counter;
+			timesync_time = (((uint64_t)DataHold)<<32) & TimeHold;
+			scandal_set_realtime(TimeHold);
 			break;
+
 		default:
 			break;
 		}
@@ -202,13 +204,6 @@ void CAN_CustomConfigureMessages( void )
     for ( i = 0; i < MSG_OBJ_MAX; i++ )
     {
 	CAN_MsgConfigParam(i, &eob, &filtermask, &filteraddr); //Fetches the mask and the address to store in the CAN message object
-
-#if 0
-	sprintf(UARTBUFF, "Obj%u - %u, %u, %u\r\n", i, eob, filtermask, filteraddr);
-	for( j = 0; UARTBUFF[j] !='\0'; i++){
-	    UARTSend( &UARTBUFF[j], 1 ); //(uint8_t *)
-				}
-#endif
 
 	LPC_CAN->IF1_CMDMSK = WR|MASK|ARB|CTRL|DATAA|DATAB; //Configuring (Writing to) the message objects
 
@@ -300,12 +295,6 @@ void CAN_MsgConfigParam(uint8_t msg_no, uint8_t *eob, uint32_t *filtermask, uint
 		case 0: //Timesync
 			*filtermask = MASK_TYPE;
 			*filteraddr = FLT_TYPE_TSNC;
-			*eob = 1;
-			break;
-
-		case 1: //Velocity
-			*filtermask = (MASK_TYPE | MASK_ADDR | MASK_CHNL);
-			*filteraddr = SCANDAL_AddrGen(7, 0, 20, 6);
 			*eob = 1;
 			break;
 
@@ -630,6 +619,7 @@ void CAN_Init( uint32_t CANBitClk )
   return;
 }
 
+#if 0
 /*****************************************************************************
 ** Function name:		CAN_Send
 **
@@ -651,11 +641,12 @@ void CAN_Send( uint8_t msg_no, uint8_t received_flag, uint32_t *msg_ptr )
   
   if ( msg_ptr == NULL )
   {
-	while( 1 );
+	return;
   }
 
   /* first is the ID, second is length, the next four are data */
   msg_id = *msg_ptr++;
+
   if ( received_flag )
   {
 	/* Mask off MsgVal, Xtd, and Dir, then make the TX msg ID twice the RX msg ID. */
@@ -757,16 +748,22 @@ void CAN_Send( uint8_t msg_no, uint8_t received_flag, uint32_t *msg_ptr )
   return;
 }
 
-void SCANDAL_Send(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t Channel_NodeType, int32_t data){
-	uint32_t tx_addr = 0x1FFFFFFF & SCANDAL_AddrGen(Pri, MsgType, NodAddr, Channel_NodeType);
+#endif
+
+/* Our own CAN_Send */
+void CAN_Send(uint16_t Pri, can_msg *msg) {
+	uint32_t tx_addr = 0x1FFFFFFF & msg->id;
 	uint8_t length = 8;
-	uint32_t Data1, Data2;
 	uint8_t BufferPos; //Buffer Position (Counter variable to see if the buffer position is BUSY
 	uint8_t BufferOffset=21; //The offset from which the buffer will start counting (Assumed 21 through 32)
 	uint8_t BufferFree; //Status of the buffer being checked, 1 indicates busy
 	uint32_t Buffers;
 
-	FlipValues(data, &Data1, &Data2);
+	/* Data is stored in can_msg->data[0-4], timestamp is stored in can_msg->data[4-7] */
+	uint32_t can_data;
+	uint32_t can_timestamp;
+	memcpy(&can_data, msg->data, sizeof(uint32_t));
+	memcpy(&can_timestamp, msg->data+sizeof(uint32_t), sizeof(uint32_t));
 
 	/* MsgVal: 1, Mtd: 1, Dir: 1, ID = 0x200000 */
 	LPC_CAN->IF1_ARB2 = ID_MVAL | ID_MTD | ID_DIR | (tx_addr >> 16);
@@ -778,14 +775,13 @@ void SCANDAL_Send(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t Cha
 
 	LPC_CAN->IF1_MCTRL = UMSK|TXRQ|EOB|(length & DLC_MASK);
 
-	LPC_CAN->IF1_DA1 = Data1;
-	LPC_CAN->IF1_DA2 = Data2;
+	/* put the data in the buffer register */
+	LPC_CAN->IF1_DA1 = can_data & 0x0000FFFF;
+	LPC_CAN->IF1_DA2 = ((can_data & 0xFFFF0000) >> 16);
 
-	//timer32_0_counter
-	FlipValues((timer32_0_counter+SCANDALClockOffset), &Data1, &Data2);
-
-	LPC_CAN->IF1_DB1 = Data1;
-	LPC_CAN->IF1_DB2 = Data2;
+	/* put the timestamp in the buffer register */
+	LPC_CAN->IF1_DB1 = can_timestamp & 0x0000FFFF;
+	LPC_CAN->IF1_DB2 = ((can_timestamp & 0xFFFF0000) >> 16);
 	LPC_CAN->IF1_CMDMSK = WR|MASK|ARB|CTRL|TREQ|DATAA|DATAB;
 
 
@@ -794,7 +790,6 @@ void SCANDAL_Send(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t Cha
 
 	BufferPos=0;
 	BufferFree=BufferCheck(BufferPos+BufferOffset);
-
 
 	//BufferFree = (Buffer >> (20-1));
 
@@ -823,14 +818,6 @@ void SCANDAL_Send(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t Cha
 	while( LPC_CAN->IF1_CMDREQ & IFCREQ_BUSY ) {
 	  ;/* Waits untill IF1 transfer thingy has done its duties */
 	}
-
-	//SCANDALClockOffset
-
-	//Swap around the bits in data to suit the buffers properly
-	//Copy the can_send stuff in and modify to be scandal specific
-
-
-
 }
 
 	//*filteraddr format: SCANDAL_AddrGen(Priority,MsgType,NodeAddress,Channel/NodeType);
@@ -840,11 +827,13 @@ void SCANDAL_Send(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t Cha
 	//		Channel/NodeType is the channel the node is sending messages for channel messages
 	//				for heartbeats, it represents the NodeType, as defined in scandal_devices.h
 
+#if 0
 uint32_t SCANDAL_AddrGen(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t Chnl_NodTyp){
 
 	return (Pri << 26) | ( MsgType << 18) | (NodAddr << 10) | Chnl_NodTyp;
 	//(Ext << 30) | Will be re-written such that this isn't required
 }
+#endif
 
 //Returns true of the buffer is BUSY so move on to the next buffer
 uint8_t BufferCheck(uint8_t ToCheck){
@@ -857,39 +846,4 @@ uint8_t BufferCheck(uint8_t ToCheck){
 	return ret;
 
 }
-
-
-/*****************************************************************************
-** Function name:		FlipValues
-**
-** Descriptions:		The CAN data registers on the LPC11C15 are arranged
-** 						in a very nonsensival format, ie - (10 32 54 76)
-** 						where each number represents a byte (8 Bits or 2 Hex).
-** 						This function flips the values into (01 23) and (45 67)
-** 						and these are returned via the two pointers
-**
-** 						TODO: ponder about doing the converse in one function too
-**
-** parameters:			Input data (1x32 bits), two pointers to where the flipped data will be placed (2x16 bits)
-** Returned value:		None
-**
-*****************************************************************************/
-void FlipValues(uint32_t Input, uint32_t *D1, uint32_t *D2){
-	uint32_t Set1;
-	uint32_t Set2;
-//	uint8_t LeftShift;
-//	uint8_t RightShift;
-
-	Set1 = (Input >> 16) & 0x0000FFFF;
-	*D1 = (((Set1 & 0x000000FF) << 8) | ((Set1 & 0x0000FF00) >> 8));
-	Set2 = Input & 0x0000FFFF;
-	*D2 = (((Set2 & 0x000000FF) << 8) | ((Set2 & 0x0000FF00) >> 8));
-
-}
-// #if CONFIG_ENABLE_DRIVER_CAN==1
 #endif
-
-/******************************************************************************
-**                            End Of File
-******************************************************************************/
-
