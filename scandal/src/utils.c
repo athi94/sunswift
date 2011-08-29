@@ -94,9 +94,12 @@ void scandal_delay(int num){
 	sc_time_t time = sc_get_timer();
 	while(time + num > sc_get_timer())
 		;
-//	volatile int i; 
-//	for(i=num; i>0; i--)
-//		; 
+}
+
+void scandal_naive_delay(int num) {
+	volatile int i; 
+	for(i=num; i>0; i--)
+		; 
 }
 
 #ifdef AVAILABLE_64

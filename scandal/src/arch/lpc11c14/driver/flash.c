@@ -67,7 +67,7 @@ void sc_write_conf(scandal_config*	conf) {
 	/* actually do the write */
 	iapCommand[0] = 51;					// write to flash command
 	iapCommand[1] = 0x00007000;			// write starting from this flash address
-	iapCommand[2] = &write_buffer;		// read from this memory address
+	iapCommand[2] = (uint32_t)(&write_buffer);		// read from this memory address
 	iapCommand[3] = 256;				// 256 bytes is the minimum size we can write to at once
 	iapCommand[4] = 48000;				// clock speed in khz - 48000
 	iap_entry (iapCommand, iapResult);

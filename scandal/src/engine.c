@@ -35,12 +35,7 @@
 #include <scandal/message.h>
 
 #include <project/scandal_config.h>
-
 #include <project/driver_config.h>
-
-#ifdef CAN_UART_DEBUG
-#include <arch/uart.h>
-#endif
 
 in_channel      in_channels[NUM_IN_CHANNELS];
 scandal_config  my_config;
@@ -64,8 +59,6 @@ void            retrieve_channel_mb(u16 chan_num);
 u08             scandal_get_msg_type(can_msg *msg);
 u08             scandal_get_msg_priority(can_msg *msg);
 
-#include <arch/uart.h>
-
 /* Functions */
 u08 scandal_init(void){
 	u16 i;
@@ -75,8 +68,6 @@ u08 scandal_init(void){
 	init_can();
 	sc_init_timer();
 	sc_init_eeprom();
-
-	UARTInit(115200);
 
 	scandal_delay(100);
 
@@ -94,9 +85,10 @@ u08 scandal_init(void){
 		in_channels[i].rcvd_time = 0;
 		in_channels[i].time = 0;
 		/* Register the ID */
+		u32 id = scandal_mk_channel_id(0, my_config.ins[i].source_node,
+								my_config.ins[i].source_num);
 		can_register_id(0x03FFFFFF,
-				scandal_mk_channel_id(	0, 	my_config.ins[i].source_node,
-								my_config.ins[i].source_num),
+				id,
 				0);
 	}
 
@@ -408,10 +400,6 @@ u08	scandal_handle_timesync(can_msg* msg){
     first = FIRST_32_BITS(msg); 
     second = SECOND_32_BITS(msg); 
     timestamp = ((uint64_t)first) << 32 | (uint64_t)second; 
-
-#ifdef CAN_UART_DEBUG
-	UART_printf("[CAN DEBUG] %s got timesync packet\n\r", __func__);
-#endif
 
     scandal_set_realtime(timestamp); 
 
