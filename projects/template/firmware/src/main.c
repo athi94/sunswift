@@ -40,17 +40,21 @@ void setup_ports(void) {
 int main(void)
 {
 	int i = 0; /* Used in main loop */
-	sc_time_t one_sec_timer = sc_get_timer(); /* Initialise the timer variable */
-
+	uint32_t value = 0xaa;
 	setup_ports();
 
 	scandal_init();
 
-	UARTInit(115200);
+	//UARTInit(115200);
+
+	sc_time_t one_sec_timer = sc_get_timer(); /* Initialise the timer variable */
+	sc_time_t test_in_timer = sc_get_timer(); /* Initialise the timer variable */
 
 	/* Set LEDs to known states, i.e. on */
 	red_led(1);
 	yellow_led(0);
+
+	scandal_delay(100); /* wait for the UART clocks to settle */
 
 	/* Display welcome header over UART */
 	UART_printf("Welcome to the template project! This is coming out over UART1\n\r");
@@ -71,7 +75,7 @@ int main(void)
 			/* Send a channel message with a blerg value at low priority on channel 0 */
 			scandal_send_channel(TELEM_LOW, /* priority */
 									0,      /* channel num */
-									0xaa    /* value */
+									value    /* value */
 			);
 
 			/* Twiddle the LEDs */
@@ -81,5 +85,19 @@ int main(void)
 			/* Update the timer */
 			one_sec_timer = sc_get_timer();
 		}
+
+		if(scandal_get_in_channel_rcvd_time(TEMPLATE_TEST_IN) > test_in_timer) {
+
+			value = scandal_get_in_channel_value(TEMPLATE_TEST_IN);
+
+			if(scandal_get_in_channel_value(TEMPLATE_TEST_IN) == 1) {
+				toggle_red_led();
+			} else {
+				toggle_yellow_led();
+			}
+
+			test_in_timer = scandal_get_in_channel_rcvd_time(TEMPLATE_TEST_IN);
+		}
+
 	}
 }

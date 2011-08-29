@@ -54,6 +54,10 @@
 #include <scandal/error.h>
 #include <scandal/timer.h>
 
+#define RECV_BUFF_DIVIDE 20 /* this gives 0-21 as recv buffers and 21-32 as tx buffers */
+
+uint8_t recv_buf_used[MSG_OBJ_MAX]; /* this will be used to determine if a recv buffer is available */
+
 #define CUSTOM_CONFIG 1
 #define REORDER_DATA 1
 /* statistics of all the interrupts */
@@ -70,7 +74,15 @@ uint32_t CANStatusLogCount = 0;
 #endif
 
 /* Scandal wrappers
- * *****************/
+ * *****************
+ * for reference:
+ * typedef struct can_mg {
+ *   u32 id;
+ *   u08 data[CAN_MSG_MAXSIZE];
+ *   u08 length;
+ * } can_msg;
+ */
+
 
 void init_can(void) {
 	CAN_Init(BITRATE50K16MHZ);
@@ -78,20 +90,78 @@ void init_can(void) {
 
 /*! Get a message from the CAN controller. */
 u08 can_get_msg(can_msg* msg) {
+	int i;
+	uint8_t can_data[CAN_MSG_MAXSIZE/2];
+	uint8_t can_timestamp[CAN_MSG_MAXSIZE/2];
+	uint16_t priority;
+	uint16_t msg_type;
+	uint16_t node_address;
+	uint16_t channel_num;
+
+	for(i = 0; i < MSG_OBJ_MAX; i++) {
+		if (CANRxDone[i] == TRUE) {
+			int n = 0;
+			CAN_decode_packet(i, (int32_t*)(&can_data), (uint32_t*)(&can_timestamp), &priority, &msg_type, &node_address, &channel_num);
+
+			UART_printf("got a can message...\n\r");
+			msg->id = can_buff[i].id;
+			msg->length= CAN_MSG_MAXSIZE;
+			/* ordering is important! */
+			msg->data[7] = can_timestamp[0];
+			msg->data[6] = can_timestamp[1];
+			msg->data[5] = can_timestamp[2];
+			msg->data[4] = can_timestamp[3];
+			msg->data[3] = can_data[0];
+			msg->data[2] = can_data[1];
+			msg->data[1] = can_data[2];
+			msg->data[0] = can_data[3];
+			UART_printf(" id is               %d (0x%x)\n\r", can_buff[i].id, can_buff[i].id);
+			UART_printf(" priority is         %d\n\r", priority);
+			UART_printf(" node_address is     %d\n\r", node_address);
+			UART_printf(" message type is     %d\n\r", msg_type);
+			UART_printf(" channel_num is      %d\n\r", channel_num);
+			UART_printf(" data value is:      %d (0x%x)\n\r", *((uint32_t*)&msg->data[0]), *((uint32_t*)&msg->data[0]));
+			UART_printf(" timestamp value is: %d (0x%x)\n\r", *((uint32_t*)&msg->data[4]), *((uint32_t*)&msg->data[4]));
+			for(n = 0; n < 8; n++)
+				UART_printf("msg->data[%d] = %d (0x%x)\n\r", n, msg->data[n], msg->data[n]);
+			return NO_ERR;
+		}
+	}
 	return NO_MSG_ERR;
 }
 
 /*! Send a message using the CAN controller */
 u08 can_send_msg(can_msg *msg, u08 priority) {
 	CAN_Send((uint16_t)priority, msg);
-	return NO_MSG_ERR;
+	return NO_ERR;
 }
 
 /*! Register a message ID/mask. This guarantees that these messages will
   not be filtered out by hardware filters. Other messages are not
   guaranteed */
 u08 can_register_id(u32 mask, u32 data, u08 priority) {
-	return 0;
+	int i;
+	NVIC_DisableIRQ(CAN_IRQn);
+	LPC_CAN->CNTL &= ~(CTRL_IE|CTRL_SIE|CTRL_EIE);
+
+	for(i = 0; i < RECV_BUFF_DIVIDE; i++) {
+		/* if we have run out of recv buffers, error out */
+		if (i == RECV_BUFF_DIVIDE-1) {
+			NVIC_EnableIRQ(CAN_IRQn);
+			LPC_CAN->CNTL |= (CTRL_IE|CTRL_SIE|CTRL_EIE);
+			return NO_ERR;
+
+		/* find a free buffer and set up a filter */
+		} else if (!recv_buf_used[i]) {
+			//uint8_t eob = 1;
+			//CAN_MsgConfigParam(i, &eob, filtermask, uint32_t *filteraddr){
+			CAN_set_up_filter(i, mask, data);
+			recv_buf_used[i] = 1;
+			NVIC_EnableIRQ(CAN_IRQn);
+			LPC_CAN->CNTL |= (CTRL_IE|CTRL_SIE|CTRL_EIE);
+			return NO_ERR;
+		}
+	}
 }
 
 /* Parameter settings */
@@ -99,13 +169,26 @@ u08  can_baud_rate(u08 mode) {
 	return 0;
 }
 
-void can_poll(void) {
-
-}
+/* this is not used on LPC11C14 */
+void can_poll(void) {}
 
 /* *******************
  * End Scandal wrappers
  */
+
+void CAN_decode_packet(uint8_t msg_num, int32_t *data, uint32_t *timestamp,
+	uint16_t *priority, uint16_t *type, uint16_t *node_address, uint16_t *channel_num) {
+
+	*data         = (can_buff[msg_num].data[0] << 16) | (can_buff[msg_num].data[1]);
+	*timestamp    = (can_buff[msg_num].data[2] << 16) | (can_buff[msg_num].data[3]);
+
+	*channel_num  = ((can_buff[msg_num].id >> 0)  & 0x03FF);
+	*node_address = ((can_buff[msg_num].id >> 10) & 0x00FF);
+	*type         = ((can_buff[msg_num].id >> 18) & 0x00FF);
+	*priority     = ((can_buff[msg_num].id >> 26) & 0x0007);
+
+	CANRxDone[msg_num] = 0;
+}
 
 void FetchData(uint8_t MsgNum, int32_t *DataPointer, uint32_t *TimePointer){
 
@@ -134,6 +217,9 @@ void FetchHeaders(uint8_t MsgNum, uint16_t *Pri, uint16_t *MsgType, uint16_t *No
  * Reminder: Fetchdata returns int32 for data and uint32 for timestamp while
  * FetchHeaders returns uint16 for Pri, MsgType, NodAddr, Chnl_NodTyp
  */
+
+/* this function is not called at the moment */
+
 void ProcessReceived(uint8_t MsgNum){
 
 	int32_t DataHold = 0;
@@ -155,6 +241,34 @@ void ProcessReceived(uint8_t MsgNum){
 		}
 }
 
+static inline void CAN_set_up_filter(uint8_t msg_id, uint32_t filter_mask, uint32_t filter_addr) {
+	LPC_CAN->IF1_CMDMSK = WR|MASK|ARB|CTRL|DATAA|DATAB; //Configuring (Writing to) the message objects
+
+	  /* Mxtd: 1, Mdir: 0, Mask is 0x1FFFFFFF */
+	LPC_CAN->IF1_MSK1 = filter_mask & 0xFFFF; //Filtermask used to be ID_EXT_MASK
+	LPC_CAN->IF1_MSK2 = MASK_MXTD | (filter_mask >> 16);
+
+	/* MsgVal: 1, Mtd: 1, Dir: 0, ID = 0x100000 */
+	LPC_CAN->IF1_ARB1 = (filter_addr) & 0xFFFF; //filteraddr used to be RX_EXT_MSG_ID + i
+	LPC_CAN->IF1_ARB2 = ID_MVAL | ID_MTD | (filter_addr >> 16); //Transmit (1<<13)
+
+	LPC_CAN->IF1_MCTRL = UMSK|RXIE|EOB|DLC_MAX;
+
+	LPC_CAN->IF1_DA1 = 0x0000;
+	LPC_CAN->IF1_DA2 = 0x0000;
+	LPC_CAN->IF1_DB1 = 0x0000;
+	LPC_CAN->IF1_DB2 = 0x0000;
+
+	/* Transfer data to message RAM */
+#if BASIC_MODE
+	LPC_CAN->IF1_CMDREQ = IFCREQ_BUSY;
+#else
+	LPC_CAN->IF1_CMDREQ = msg_id+1;
+#endif
+	while( LPC_CAN->IF1_CMDREQ & IFCREQ_BUSY );
+
+}
+
 /*****************************************************************************
 ** Function name:		CAN_CustomConfigureMessages
 **
@@ -173,8 +287,8 @@ void CAN_CustomConfigureMessages( void )
   uint32_t i;
   uint32_t j;
   uint32_t ext_frame = 1; //Originally 0, set to 1
-  uint32_t filtermask;
-  uint32_t filteraddr;
+  uint32_t filter_mask;
+  uint32_t filter_addr;
   uint8_t eob=1;
 
   /* It's organized in such a way that:
@@ -185,34 +299,10 @@ void CAN_CustomConfigureMessages( void )
 	    obj31 is not used.
 		obj32 is for remote date request test only */
 
-    for ( i = 0; i < MSG_OBJ_MAX; i++ )
+  for ( i = 21; i < MSG_OBJ_MAX; i++ )
     {
-	CAN_MsgConfigParam(i, &eob, &filtermask, &filteraddr); //Fetches the mask and the address to store in the CAN message object
-
-	LPC_CAN->IF1_CMDMSK = WR|MASK|ARB|CTRL|DATAA|DATAB; //Configuring (Writing to) the message objects
-
-	  /* Mxtd: 1, Mdir: 0, Mask is 0x1FFFFFFF */
-	LPC_CAN->IF1_MSK1 = filtermask & 0xFFFF; //Filtermask used to be ID_EXT_MASK
-	LPC_CAN->IF1_MSK2 = MASK_MXTD | (filtermask >> 16);
-
-	/* MsgVal: 1, Mtd: 1, Dir: 0, ID = 0x100000 */
-	LPC_CAN->IF1_ARB1 = (filteraddr) & 0xFFFF; //filteraddr used to be RX_EXT_MSG_ID + i
-	LPC_CAN->IF1_ARB2 = ID_MVAL | ID_MTD | (filteraddr >> 16); //Transmit (1<<13)
-
-	LPC_CAN->IF1_MCTRL = UMSK|RXIE|EOB|DLC_MAX;
-
-	LPC_CAN->IF1_DA1 = 0x0000;
-	LPC_CAN->IF1_DA2 = 0x0000;
-	LPC_CAN->IF1_DB1 = 0x0000;
-	LPC_CAN->IF1_DB2 = 0x0000;
-
-	/* Transfer data to message RAM */
-#if BASIC_MODE
-	LPC_CAN->IF1_CMDREQ = IFCREQ_BUSY;
-#else
-	LPC_CAN->IF1_CMDREQ = i+1;
-#endif
-	while( LPC_CAN->IF1_CMDREQ & IFCREQ_BUSY );
+	CAN_MsgConfigParam(i, &eob, &filter_mask, &filter_addr); //Fetches the mask and the address to store in the CAN message object
+	CAN_set_up_filter(i, filter_mask, filter_addr);
   }
   return;
 }
@@ -276,9 +366,15 @@ void CAN_MsgConfigParam(uint8_t msg_no, uint8_t *eob, uint32_t *filtermask, uint
 	//				for heartbeats, it represents the NodeType, as defined in scandal_devices.h
 
 	switch(msg_no){
-		case 0: //Timesync
+		case 0: // Timesync
 			*filtermask = MASK_TYPE;
 			*filteraddr = FLT_TYPE_TSNC;
+			*eob = 1;
+			break;
+
+		case 1: // Channel messages
+			*filtermask= MASK_TYPE;
+			*filteraddr = FLT_TYPE_CHNL;
 			*eob = 1;
 			break;
 
@@ -412,7 +508,7 @@ void CAN_IRQHandler(void)
 		  LPC_CAN->STAT &= ~STAT_RXOK;
 		  CAN_MessageProcess( msg_no-1 ); //msg_no goes up from 1, msg_no ranges from 0
 		  CANRxDone[msg_no-1] = TRUE;
-		  ProcessReceived(msg_no-1);
+		  //ProcessReceived(msg_no-1);
 		}
 	  }
 	}
@@ -587,7 +683,7 @@ void CAN_Init( uint32_t CANBitClk )
 	    obj31 is not used. 
 		obj32 is for remote date request test only */
 #if CUSTOM_CONFIG  //Defining own buffer customisation
-  CAN_CustomConfigureMessages();
+//  CAN_CustomConfigureMessages();
 #else
   CAN_ConfigureMessages();
 #endif
