@@ -63,6 +63,7 @@
 #define SMARTDCDC							31
 #define STEERINGWHEEL						32
 #define GPSBAROMETER                        33
+#define TEMPLATE							34
 
 /* -----------------------------------------------
 	Channel Numbering Constants
@@ -698,5 +699,15 @@
 
 	/* In Channels */
                 #define GPSBAROMETER_NUM_IN_CHANNELS                        0
+
+
+/* TEMPLATE interface */
+	/* Out Channels */
+                #define TEMPLATE_TEST_OUT                                   0
+                #define TEMPLATE_NUM_OUT_CHANNELS                           1
+
+	/* In Channels */
+                #define TEMPLATE_TEST_IN                                    0
+                #define TEMPLATE_NUM_IN_CHANNELS                            1
 
 

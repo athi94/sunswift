@@ -16,7 +16,7 @@ AS = arm-none-eabi-as
 LD = arm-none-eabi-ld
 SIZE = arm-none-eabi-size
 OBJCOPY = arm-none-eabi-objcopy
-START_PROGRAMMER = dfu-util
+START_PROGRAMMER = $(UTILS)/dfu-util
 FLASH_CHIP = crt_emu_lpc11_13_nxp
 CHECKSUM = checksum
 
@@ -141,12 +141,14 @@ program: main.axf
 	@echo "[PROGRAM]  checking for programmer...";
 	@-lsusb | grep -q "df55"; \
 	if [ $$? -eq 0 ]; then \
-		echo "[PROGRAM]   detected LPC Expresso, setting to programmer mode..."; \
-		echo -e "\033[91m[PROGRAM]    If in VMware Fusion, you may need to reattach the CodeRed device...\033[0m"; \
+		echo "[PROGRAM]   detected LPC Expresso"; \
 		if [ -x "$(START_PROGRAMMER)" ]; then \
-			$(START_PROGRAMMER) -d 0x471:0xdf55 -c 0 -t 2048 -R -D $(UTILS)/LPCXpressoWIN.enc > /dev/null 2>&1; \
+			sudo $(START_PROGRAMMER) -d 0x471:0xdf55 -c 0 -t 2048 -R -D $(UTILS)/LPCXpressoWIN.enc > /dev/null 2>&1; \
 			if [ $$? -ne 0 ]; then \
 				echo -e "\033[91m[PROGRAM]    dfu-util failed to change programmer mode!\033[0m"; \
+			else \
+				echo -e "\033[91m[PROGRAM]    Successfully changed LPCXpresso into correct mode.\033[0m"; \
+				echo -e "\e[1;33m[PROGRAM]    If in VMware Fusion, you may need to reattach the CodeRed device...\033[0m"; \
 			fi; \
 		else \
 			echo -e "\033[91m[PROGRAM]    dfu-util doesn't exist in path!\033[0m"; \

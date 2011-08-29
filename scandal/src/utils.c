@@ -91,9 +91,12 @@ void scandal_ms_delay(sc_time_t delay){
 }
 
 void scandal_delay(int num){
-	volatile int i; 
-	for(i=num; i>0; i--)
-		; 
+	sc_time_t time = sc_get_timer();
+	while(time + num > sc_get_timer())
+		;
+//	volatile int i; 
+//	for(i=num; i>0; i--)
+//		; 
 }
 
 #ifdef AVAILABLE_64

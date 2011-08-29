@@ -36,6 +36,12 @@
 
 #include <project/scandal_config.h>
 
+#include <project/driver_config.h>
+
+#ifdef CAN_UART_DEBUG
+#include <arch/uart.h>
+#endif
+
 in_channel      in_channels[NUM_IN_CHANNELS];
 scandal_config  my_config;
 volatile u32    heartbeat_timer;
@@ -58,6 +64,8 @@ void            retrieve_channel_mb(u16 chan_num);
 u08             scandal_get_msg_type(can_msg *msg);
 u08             scandal_get_msg_priority(can_msg *msg);
 
+#include <arch/uart.h>
+
 /* Functions */
 u08 scandal_init(void){
 	u16 i;
@@ -68,13 +76,16 @@ u08 scandal_init(void){
 	sc_init_timer();
 	sc_init_eeprom();
 
+	UARTInit(115200);
+
+	scandal_delay(100);
+
 	/* Initialise the local address
 		determine if this is first run or not */
 
 	sc_read_conf(&my_config);
 	if(my_config.version != SCANDAL_VERSION)
 		do_first_run();
-
 
 	/* Set up infrastructure for the in-channels */
 	for(i=0; i<NUM_IN_CHANNELS; i++){
@@ -397,6 +408,10 @@ u08	scandal_handle_timesync(can_msg* msg){
     first = FIRST_32_BITS(msg); 
     second = SECOND_32_BITS(msg); 
     timestamp = ((uint64_t)first) << 32 | (uint64_t)second; 
+
+#ifdef CAN_UART_DEBUG
+	UART_printf("[CAN DEBUG] %s got timesync packet\n\r", __func__);
+#endif
 
     scandal_set_realtime(timestamp); 
 
