@@ -45,7 +45,7 @@ int main(void)
 
 	scandal_init();
 
-	//UARTInit(115200);
+	UARTInit(115200);
 
 	sc_time_t one_sec_timer = sc_get_timer(); /* Initialise the timer variable */
 	sc_time_t test_in_timer = sc_get_timer(); /* Initialise the timer variable */
@@ -59,6 +59,7 @@ int main(void)
 	/* Display welcome header over UART */
 	UART_printf("Welcome to the template project! This is coming out over UART1\n\r");
 	UART_printf("The 2 debug LEDs should blink at a rate of 1HZ\n\r");
+	UART_printf("If you configure the in channel 0, I should print a message upon receipt of such a channel message\n\r");
 
 	/* This is the main loop, go for ever! */
 	while (1) {
@@ -89,6 +90,8 @@ int main(void)
 		if(scandal_get_in_channel_rcvd_time(TEMPLATE_TEST_IN) > test_in_timer) {
 
 			value = scandal_get_in_channel_value(TEMPLATE_TEST_IN);
+
+			UART_printf("Yay, I received a channel message on in_channel 0, the value was: %d\n\r", value);
 
 			if(scandal_get_in_channel_value(TEMPLATE_TEST_IN) == 1) {
 				toggle_red_led();

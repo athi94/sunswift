@@ -20,23 +20,9 @@
  * use without further testing or modification.
 ****************************************************************************/
 
-/*	Progress on editing (Porting of SCANDAL)
- * 		-Sending data:
- * 			-Sending packet of SCANDAL format with timestamp (working 13 Aug 2011)
- * 			-Buffering of TX messages in the message objects (Using MSG OBJ 21-32) (written, need to test)
- *
- * 		-Receiving data:
- * 			-Basic interrupt based receiving (was in CMSIS)
- * 			-Conversion of received data into SCANDAL format and handling this externally (depending on each users needs)
- * 			-Receiving timestamps and syncing the clock
- *
- * 		-Configuration of registers:
- * 			-Initialisation routine	(written, need to test)
- * 			-Setting the initialisation parameters from an external function (that each user writes depending on their needs)
- *
- *			Idea - Combine ProcessReceived and CAN_MsgConfigParam to make it easier to see whats happening where
- *							It could also be used to initialise static variables!!!
- */
+/* CAN_ functions are non scandal specific.
+ * This still could do with a bit of tidy. */
+
 #include <project/driver_config.h>
 
 #include <string.h> /* for memcpy */
@@ -60,6 +46,7 @@ uint8_t recv_buf_used[MSG_OBJ_MAX]; /* this will be used to determine if a recv 
 
 #define CUSTOM_CONFIG 1
 #define REORDER_DATA 1
+
 /* statistics of all the interrupts */
 volatile uint32_t BOffCnt = 0;
 volatile uint32_t EWarnCnt = 0;
@@ -68,6 +55,7 @@ volatile uint32_t EPassCnt = 0;
 uint32_t CANRxDone[MSG_OBJ_MAX];
 
 message_object can_buff[MSG_OBJ_MAX];
+
 #if CAN_DEBUG
 uint32_t CANStatusLog[100];
 uint32_t CANStatusLogCount = 0;
@@ -83,12 +71,11 @@ uint32_t CANStatusLogCount = 0;
  * } can_msg;
  */
 
-
 void init_can(void) {
 	CAN_Init(BITRATE50K16MHZ);
 }
 
-/*! Get a message from the CAN controller. */
+/* Get a message from the CAN controller. */
 u08 can_get_msg(can_msg* msg) {
 	int i;
 	uint8_t can_data[CAN_MSG_MAXSIZE/2];
@@ -103,7 +90,6 @@ u08 can_get_msg(can_msg* msg) {
 			int n = 0;
 			CAN_decode_packet(i, (int32_t*)(&can_data), (uint32_t*)(&can_timestamp), &priority, &msg_type, &node_address, &channel_num);
 
-			UART_printf("got a can message...\n\r");
 			msg->id = can_buff[i].id;
 			msg->length= CAN_MSG_MAXSIZE;
 			/* ordering is important! */
@@ -115,6 +101,9 @@ u08 can_get_msg(can_msg* msg) {
 			msg->data[2] = can_data[1];
 			msg->data[1] = can_data[2];
 			msg->data[0] = can_data[3];
+
+#ifdef CAN_UART_DEBUG
+			UART_printf("got a can message...\n\r");
 			UART_printf(" id is               %d (0x%x)\n\r", can_buff[i].id, can_buff[i].id);
 			UART_printf(" priority is         %d\n\r", priority);
 			UART_printf(" node_address is     %d\n\r", node_address);
@@ -124,23 +113,29 @@ u08 can_get_msg(can_msg* msg) {
 			UART_printf(" timestamp value is: %d (0x%x)\n\r", *((uint32_t*)&msg->data[4]), *((uint32_t*)&msg->data[4]));
 			for(n = 0; n < 8; n++)
 				UART_printf("msg->data[%d] = %d (0x%x)\n\r", n, msg->data[n], msg->data[n]);
+#endif
+
 			return NO_ERR;
 		}
 	}
 	return NO_MSG_ERR;
 }
 
-/*! Send a message using the CAN controller */
+/* Send a message using the CAN controller */
 u08 can_send_msg(can_msg *msg, u08 priority) {
 	CAN_Send((uint16_t)priority, msg);
 	return NO_ERR;
 }
 
-/*! Register a message ID/mask. This guarantees that these messages will
-  not be filtered out by hardware filters. Other messages are not
-  guaranteed */
+/* Register for a message type. Currently, each message that we want to register
+ * for is given a specific message buffer. This limits the maximum number of in
+ * channels to be 21 - 4 = 17. Look in scandal/engine.c for where this function
+ * is called to see why. At the moment, I don't think there are any nodes with
+ * large numbers of in channels. If we need to deal with this, it can be done 
+ * in the future */
 u08 can_register_id(u32 mask, u32 data, u08 priority) {
 	int i;
+
 	NVIC_DisableIRQ(CAN_IRQn);
 	LPC_CAN->CNTL &= ~(CTRL_IE|CTRL_SIE|CTRL_EIE);
 
@@ -153,18 +148,19 @@ u08 can_register_id(u32 mask, u32 data, u08 priority) {
 
 		/* find a free buffer and set up a filter */
 		} else if (!recv_buf_used[i]) {
-			//uint8_t eob = 1;
-			//CAN_MsgConfigParam(i, &eob, filtermask, uint32_t *filteraddr){
 			CAN_set_up_filter(i, mask, data);
 			recv_buf_used[i] = 1;
 			NVIC_EnableIRQ(CAN_IRQn);
 			LPC_CAN->CNTL |= (CTRL_IE|CTRL_SIE|CTRL_EIE);
+#ifdef CAN_UART_DEBUG
+			UART_printf("registering for a message type %d (0x%x)\n\r", data, data);
+#endif
 			return NO_ERR;
 		}
 	}
 }
 
-/* Parameter settings */
+/* does nothing yet */
 u08  can_baud_rate(u08 mode) {
 	return 0;
 }
@@ -190,67 +186,16 @@ void CAN_decode_packet(uint8_t msg_num, int32_t *data, uint32_t *timestamp,
 	CANRxDone[msg_num] = 0;
 }
 
-void FetchData(uint8_t MsgNum, int32_t *DataPointer, uint32_t *TimePointer){
-
-		*DataPointer=(can_buff[MsgNum].data[0]<<16) | (can_buff[MsgNum].data[1]);
-		*TimePointer=(can_buff[MsgNum].data[2]<<16) | (can_buff[MsgNum].data[3]);
-		CANRxDone[MsgNum] = 0;
-}
-
-void FetchHeaders(uint8_t MsgNum, uint16_t *Pri, uint16_t *MsgType, uint16_t *NodAddr, uint16_t *Chnl_NodTyp){
-
-		//(Pri << 26) (Len=3) | ( MsgType << 18) (Len=8) | (NodAddr << 10) (Len=8) | Chnl_NodTyp (Len=10)
-		*Chnl_NodTyp=((can_buff[MsgNum].id >> 0)& 0x03FF);
-		*NodAddr=((can_buff[MsgNum].id >> 10)& 0x00FF);
-		*MsgType=((can_buff[MsgNum].id >> 18)& 0x00FF);
-		*Pri=((can_buff[MsgNum].id >> 26)& 0x0007);
-		CANRxDone[MsgNum] = 0;
-}
-
-
-/*This function is called by the interrupt handler after the a message of interest comes in
- * The message number (0 to 31) is passed in and are to be handled as the user desires,
- * typically with a switch(case).
- *
- * To collect either the data or the header from the calling message, run FetchData or FetchHeaders
- * remember that these two functions require pointers to where the data and/or headers are to  be saved
- * Reminder: Fetchdata returns int32 for data and uint32 for timestamp while
- * FetchHeaders returns uint16 for Pri, MsgType, NodAddr, Chnl_NodTyp
- */
-
-/* this function is not called at the moment */
-
-void ProcessReceived(uint8_t MsgNum){
-
-	int32_t DataHold = 0;
-	uint32_t TimeHold = 0;
-	uint64_t timesync_time = 0;
-
-	switch(MsgNum) {
-		case 0: //Timesync
-			FetchData(MsgNum, &DataHold, &TimeHold);
-			timesync_time = (((uint64_t)DataHold)<<32) & TimeHold;
-			scandal_set_realtime(timesync_time);
-#ifdef CAN_UART_DEBUG
-			UART_printf("[CAN DEBUG]: Got a timesync packet!\n\r");
-#endif
-			break;
-
-		default:
-			break;
-		}
-}
-
 static inline void CAN_set_up_filter(uint8_t msg_id, uint32_t filter_mask, uint32_t filter_addr) {
+
 	LPC_CAN->IF1_CMDMSK = WR|MASK|ARB|CTRL|DATAA|DATAB; //Configuring (Writing to) the message objects
 
-	  /* Mxtd: 1, Mdir: 0, Mask is 0x1FFFFFFF */
 	LPC_CAN->IF1_MSK1 = filter_mask & 0xFFFF; //Filtermask used to be ID_EXT_MASK
 	LPC_CAN->IF1_MSK2 = MASK_MXTD | (filter_mask >> 16);
 
-	/* MsgVal: 1, Mtd: 1, Dir: 0, ID = 0x100000 */
 	LPC_CAN->IF1_ARB1 = (filter_addr) & 0xFFFF; //filteraddr used to be RX_EXT_MSG_ID + i
-	LPC_CAN->IF1_ARB2 = ID_MVAL | ID_MTD | (filter_addr >> 16); //Transmit (1<<13)
+	LPC_CAN->IF1_ARB2 = ID_MVAL | ID_MTD | (filter_addr >> 16); // use this message object, extended
+	LPC_CAN->IF1_ARB2 &= ~ID_DIR; // receive direction
 
 	LPC_CAN->IF1_MCTRL = UMSK|RXIE|EOB|DLC_MAX;
 
@@ -260,133 +205,11 @@ static inline void CAN_set_up_filter(uint8_t msg_id, uint32_t filter_mask, uint3
 	LPC_CAN->IF1_DB2 = 0x0000;
 
 	/* Transfer data to message RAM */
-#if BASIC_MODE
-	LPC_CAN->IF1_CMDREQ = IFCREQ_BUSY;
-#else
 	LPC_CAN->IF1_CMDREQ = msg_id+1;
-#endif
+
 	while( LPC_CAN->IF1_CMDREQ & IFCREQ_BUSY );
 
 }
-
-/*****************************************************************************
-** Function name:		CAN_CustomConfigureMessages
-**
-** Descriptions:		Customisation of the original ConfigureMessages function
-				This function is used to configure the message objects
-				It calls CAN_MsgConfigParam to ask what the filtering
-				details need to be set as.
-**
-** parameters:			None
-** Returned value:		None
-**
-*****************************************************************************/
-#if CUSTOM_CONFIG
-void CAN_CustomConfigureMessages( void )
-{
-  uint32_t i;
-  uint32_t j;
-  uint32_t ext_frame = 1; //Originally 0, set to 1
-  uint32_t filter_mask;
-  uint32_t filter_addr;
-  uint8_t eob=1;
-
-  /* It's organized in such a way that:
-	    obj(x+1)	standard	receive
-	    obj(x+2)	standard	transmit
-	    obj(x+3)	extended	receive
-	    obj(x+4)	extended	transmit	where x is 0 to 7
-	    obj31 is not used.
-		obj32 is for remote date request test only */
-
-  for ( i = 21; i < MSG_OBJ_MAX; i++ )
-    {
-	CAN_MsgConfigParam(i, &eob, &filter_mask, &filter_addr); //Fetches the mask and the address to store in the CAN message object
-	CAN_set_up_filter(i, filter_mask, filter_addr);
-  }
-  return;
-}
-
-/* This function is to be set by the user to configure the receive message objects
- * for the hardware message filtering. Message number (0 to 19) or Message objects
- * (1 to 20) in hardware are currently assigned to receiving messages.
- *
- * The main thing that needs to be done is that the desired filtermask and filteraddress
- * need to be returned for each given msg_no that this function is called for.
- *
- * The filtermask tells the CAN controller which bits to look at for the hardware filtering
- * This allows us to search for messages by Priority, MessageType, Address and Channel number
- * 1's for the corresponding field means it will need to match for the message to be accepted
- *
- * So if you want all Channel Messages (Data) from node address 20 and channel 6, would be done by
- * setting the mask to (MASK_TYPE | MASK_ADDR | MASK_CHNL), this tells the mask to make sure
- * that the type, address and channel number match up.
- * Now set the filteraddress by using SCANDAL_AddrGen(X, 0, 20, 6)
- * The X denotes the priority field for the address generator, this value does not matter for us
- * because it is not included in our mask, so whatever it is in an incoming message, it will not care
- * The 0 represents the channel messages (data), the 20 the address and 6 the channel number.
- *
- * That's all you need to do to set up the hardware filtering to receive messages! :)
- * 
- * If you're ub3r and require a FIFO buffer can be set by making use of the eob value.
- * An eob of 0 indicates that the message object is part of a FIFO buffer and if it hasn't
- * been read by the interrupt receiver, it will look at the next message object to store it in.
- * This process will keep on going untill it hits an eob of 1.
- * EOB stands for "End Of Block", set it to 1 at the END of your FIFO buffer. If you're just
- * a mere mortal and don't need a FIFO buffer, set it to 1 and dont worry about it.
- * Note that if you use a FIFO - you need to set up the message handler accordingly to make use
- * of a range of data.
- *
- *  - Author: Charith P
- */
-void CAN_MsgConfigParam(uint8_t msg_no, uint8_t *eob, uint32_t *filtermask, uint32_t *filteraddr){
-
-#define MASK_PRIO 	(0x07 << 26)
-#define MASK_TYPE	(0xFF << 18)
-#define MASK_ADDR	(0xFF << 10)
-#define MASK_CHNL	(0x03FF) //Note, this becomes
-
-#define FLT_TYPE_CHNL (0 << 18) //Channel Message
-#define FLT_TYPE_CONF (1 << 18) //Configuration Message
-#define FLT_TYPE_HTBT (2 << 18) //Heartbeat Message
-#define FLT_TYPE_EROR (3 << 18) //Error
-#define FLT_TYPE_RSET (5 << 18) //Reset
-#define FLT_TYPE_TSNC (8 << 18) //Timesync message
-#define FLT_TYPE_NONE (10 << 18) //Filters out a type of message that is undefined and shouldn't receive anything.
-
-
-	//(Ext << 30) | (Pri << 26) | ( MsgType << 18) | (NodAddr << 10) | NodTyp
-	//Ext will not be needed for sending (I THINK) so testing without it
-
-	//*filteraddr format: SCANDAL_AddrGen(Priority,MsgType,NodeAddress,Channel/NodeType);
-  //		Priority ranges from 0 to 7 with lower numbers representing a greater priority message
-	//		MsgType differentiates between Channel messages, Config, Heartbeat, Error and reset messages
-	//		NodeAddress is the address of the CAN node you're interested in
-	//		Channel/NodeType is the channel the node is sending messages for channel messages
-	//				for heartbeats, it represents the NodeType, as defined in scandal_devices.h
-
-	switch(msg_no){
-		case 0: // Timesync
-			*filtermask = MASK_TYPE;
-			*filteraddr = FLT_TYPE_TSNC;
-			*eob = 1;
-			break;
-
-		case 1: // Channel messages
-			*filtermask= MASK_TYPE;
-			*filteraddr = FLT_TYPE_CHNL;
-			*eob = 1;
-			break;
-
-		default:
-			*filtermask= (MASK_PRIO | MASK_TYPE | MASK_ADDR | MASK_CHNL);
-			*filteraddr = FLT_TYPE_NONE;
-			*eob = 1;
-			break;
-		}
-
-}
-#endif
 
 /*****************************************************************************
 ** Function name:		MessageProcess
@@ -508,7 +331,6 @@ void CAN_IRQHandler(void)
 		  LPC_CAN->STAT &= ~STAT_RXOK;
 		  CAN_MessageProcess( msg_no-1 ); //msg_no goes up from 1, msg_no ranges from 0
 		  CANRxDone[msg_no-1] = TRUE;
-		  //ProcessReceived(msg_no-1);
 		}
 	  }
 	}
@@ -517,91 +339,6 @@ void CAN_IRQHandler(void)
 }
 #endif
 #endif
-
-/*****************************************************************************
-** Function name:		CAN_ConfigureMessages
-**
-** Descriptions:		Configure all the message buffers(32) that
-**           			starting from message object one, the RX and TX 
-**                      alternate. It's configured to support both standard
-**						and extended frame type. 
-**
-** parameters:			None
-** Returned value:		None
-** 
-*****************************************************************************/
-void CAN_ConfigureMessages( void )
-{
-  uint32_t i;
-  uint32_t ext_frame = 1; //Originally 0, set to 1
-
-  /* It's organized in such a way that:
-	    obj(x+1)	standard	receive
-	    obj(x+2)	standard	transmit 
-	    obj(x+3)	extended	receive
-	    obj(x+4)	extended	transmit	where x is 0 to 7
-	    obj31 is not used. 
-		obj32 is for remote date request test only */
-  
-  for ( i = 0; i < MSG_OBJ_MAX; i++ )
-  {
-	LPC_CAN->IF1_CMDMSK = WR|MASK|ARB|CTRL|DATAA|DATAB; //Configuring (Writing to) the message objects
-
-	if ( ext_frame == 0 )
-	{
-	  /* Mxtd: 0, Mdir: 0, Mask is 0x7FF */
-	  LPC_CAN->IF1_MSK1 = 0x0000;
-	  LPC_CAN->IF1_MSK2 = ID_STD_MASK << 2; //Masking 11 MSB out of 13 bits
-
-	  /* MsgVal: 1, Mtd: 0, Dir: 0, ID = 0x100 */
-	  LPC_CAN->IF1_ARB1 = 0x0000;
-	  LPC_CAN->IF1_ARB2 = ID_MVAL | ((RX_MSG_ID+i) << 2); //Receiving (0<<13)
-
-	  if ( (i % 0x02) == 0 )
-	  {
-		LPC_CAN->IF1_MCTRL = UMSK|DLC_MAX;//UMSK|EOB|DLC_MAX;
-	  }
-	  else
-	  {
-		LPC_CAN->IF1_MCTRL = UMSK|RXIE|DLC_MAX;//UMSK|RXIE|EOB|DLC_MAX;
-		ext_frame = 1;
-	  }
-	}
-	else
-	{
-	  /* Mxtd: 1, Mdir: 0, Mask is 0x1FFFFFFF */
-	  LPC_CAN->IF1_MSK1 = ID_EXT_MASK & 0xFFFF;
-	  LPC_CAN->IF1_MSK2 = MASK_MXTD | (ID_EXT_MASK >> 16);
-
-	  /* MsgVal: 1, Mtd: 1, Dir: 0, ID = 0x100000 */
-	  LPC_CAN->IF1_ARB1 = (RX_EXT_MSG_ID) & 0xFFFF;
-	  LPC_CAN->IF1_ARB2 = ID_MVAL | ID_MTD | ((RX_EXT_MSG_ID) >> 16); //Transmit (1<<13)
-
-	  if ( i<19 )//(i % 0x02) == 0
-	  {
-		LPC_CAN->IF1_MCTRL = UMSK|RXIE|DLC_MAX;//UMSK|EOB|DLC_MAX; Previously didnt take extended headers
-	  }
-	  else
-	  {
-		LPC_CAN->IF1_MCTRL = UMSK|RXIE|EOB|DLC_MAX;//UMSK|RXIE|EOB|DLC_MAX;
-		//ext_frame = 0;
-	  }
-	}
-	LPC_CAN->IF1_DA1 = 0x0000;
-	LPC_CAN->IF1_DA2 = 0x0000;
-	LPC_CAN->IF1_DB1 = 0x0000;
-	LPC_CAN->IF1_DB2 = 0x0000;
-
-	/* Transfer data to message RAM */
-#if BASIC_MODE
-	LPC_CAN->IF1_CMDREQ = IFCREQ_BUSY;
-#else
-	LPC_CAN->IF1_CMDREQ = i+1;
-#endif
-	while( LPC_CAN->IF1_CMDREQ & IFCREQ_BUSY );
-  }
-  return;
-}
 
 /*****************************************************************************
 ** Function name:		CAN_Init
@@ -673,22 +410,6 @@ void CAN_Init( uint32_t CANBitClk )
 #endif
 #endif  
 
-#if !BASIC_MODE
-  /* Below is a critical module to configure all the messages */
-  /* It's organized in such a way that:
-	    obj(x+1)	standard	receive
-	    obj(x+2)	standard	transmit 
-	    obj(x+3)	extended	receive
-	    obj(x+4)	extended	transmit	where x is 0 to 7
-	    obj31 is not used. 
-		obj32 is for remote date request test only */
-#if CUSTOM_CONFIG  //Defining own buffer customisation
-//  CAN_CustomConfigureMessages();
-#else
-  CAN_ConfigureMessages();
-#endif
-#endif
-
 #if !POLLING
   /* Enable the CAN Interrupt */
   NVIC_EnableIRQ(CAN_IRQn);
@@ -699,138 +420,6 @@ void CAN_Init( uint32_t CANBitClk )
   return;
 }
 
-#if 0
-/*****************************************************************************
-** Function name:		CAN_Send
-**
-** Descriptions:		Send a block of data to the CAN port, the 
-**						first parameter is the message number, the 2nd 
-**						parameter is the received_flag whether it sends received
-**						data as the TX data field, the third is the pointer to 
-**						the mgs field. When receive_flag is TRUE, the TX msg# is 
-**						RX msg#+1, the TX msg ID is twice of the RX msg ID,
-**						when received_flag is FALSE, no change in msg#.
-**
-** parameters:			msg #, received_flag, msg buffer pointer
-** Returned value:		None
-** 
-*****************************************************************************/
-void CAN_Send( uint8_t msg_no, uint8_t received_flag, uint32_t *msg_ptr )
-{
-  uint32_t msg_id, tx_id, Length;   
-  
-  if ( msg_ptr == NULL )
-  {
-	return;
-  }
-
-  /* first is the ID, second is length, the next four are data */
-  msg_id = *msg_ptr++;
-
-  if ( received_flag )
-  {
-	/* Mask off MsgVal, Xtd, and Dir, then make the TX msg ID twice the RX msg ID. */
-	/* the msg id should be no large than half the max. extended ID allowed. */
-	tx_id = (msg_id & 0x1FFFFFFF) << 1;
-  }
-  else
-  {
-	tx_id = msg_id;	
-  }
-  Length = *msg_ptr++;
-
-  if ( Length > DLC_MAX )
-  {
-	Length = DLC_MAX;	
-  }
-
-  if ( !(msg_id & (0x1<<30)) )		/* bit 30 is 0, standard frame */
-  {
-	/* MsgVal: 1, Mtd: 0, Dir: 1, ID = 0x200 */
-	LPC_CAN->IF1_ARB2 = ID_MVAL | ID_DIR | (tx_id << 2);
-	LPC_CAN->IF1_ARB1 = 0x0000;
-
-	/* Mxtd: 0, Mdir: 1, Mask is 0x7FF */
-	LPC_CAN->IF1_MSK2 = MASK_MDIR | (ID_STD_MASK << 2);
-	LPC_CAN->IF1_MSK1 = 0x0000;
-  }
-  else //If an extended ID, sets the tx_id and the Length
-  {
-	/* MsgVal: 1, Mtd: 1, Dir: 1, ID = 0x200000 */
-	LPC_CAN->IF1_ARB2 = ID_MVAL | ID_MTD | ID_DIR | (tx_id >> 16);
-	LPC_CAN->IF1_ARB1 = tx_id & 0x0000FFFF;
-
-	/* Mxtd: 1, Mdir: 1, Mask is 0x7FF */
-	LPC_CAN->IF1_MSK2 = MASK_MXTD | MASK_MDIR | (ID_EXT_MASK >> 16);
-	LPC_CAN->IF1_MSK1 = ID_EXT_MASK & 0x0000FFFF;
-  }
-  LPC_CAN->IF1_MCTRL = UMSK|TXRQ|EOB|(Length & DLC_MASK);
-
-
-#if REORDER_DATA
-  uint32_t msghold;
-  uint32_t msgleftshift;
-  uint32_t msgrightshift;
-
-	  msghold=*msg_ptr++; //Stores the next two bytes in msghold
-	  msgleftshift = (msghold & 0x000000FF)<<8; //Shifts the last byte left by 8 bits
-	  msgrightshift = (msghold & 0x0000FF00)>>8; //Shifts the second last byte right by 8 bits
-  LPC_CAN->IF1_DA1 = msgleftshift | msgrightshift; //OR's the two shifted results to give the data in the right order
-
-//Comment out from here to remove the rest
-	  msghold=*msg_ptr++;
-	  msgleftshift = (msghold & 0x000000FF)<<8; //Last byte, to be shifted left by 8
-	  msgrightshift = (msghold & 0x0000FF00)>>8;
-  LPC_CAN->IF1_DA2 = msgleftshift | msgrightshift;
-
-  	  msghold=*msg_ptr++;
-	  msgleftshift = (msghold & 0x000000FF)<<8; //Last byte, to be shifted left by 8
-	  msgrightshift = (msghold & 0x0000FF00)>>8;
-  LPC_CAN->IF1_DB1 = msgleftshift | msgrightshift;
-
-  	  msghold=*msg_ptr;
-	  msgleftshift = (msghold & 0x000000FF)<<8; //Last byte, to be shifted left by 8
-	  msgrightshift = (msghold & 0x0000FF00)>>8;
-  LPC_CAN->IF1_DB2 = msgleftshift | msgrightshift;
-
-#else
-  LPC_CAN->IF1_DA1 = *msg_ptr++;
-  LPC_CAN->IF1_DA2 = *msg_ptr++;
-  LPC_CAN->IF1_DB1 = *msg_ptr++;
-  LPC_CAN->IF1_DB2 = *msg_ptr;
-#endif
-
-  LPC_CAN->IF1_CMDMSK = WR|MASK|ARB|CTRL|TREQ|DATAA|DATAB;
-#if BASIC_MODE
-  LPC_CAN->IF1_CMDREQ = IFCREQ_BUSY;
-#else
-  /* if receive_ flag is FALSE, the TX uses the normal message object (msg_no+1)
-  for transmit. When received_flag is TRUE, msg_no+1 is the message object for RX,
-  TX uses the message object next to RX(msg_no+2) for transmit. */ 
-  if ( received_flag )
-  {
-	LPC_CAN->IF1_CMDREQ = msg_no+2;
-  }
-  else
-  {
-	LPC_CAN->IF1_CMDREQ = msg_no+1;
-  }
-  /*int i; //Removes LED Blinking
-	for(i=0; i < 100000; i++)
-		GPIOSetValue(2,8,0); //Yel LED, Low (on)
-	for(i=0; i < 100000; i++)
-		GPIOSetValue(2,8,1); //Yel LED, Low (off)*/
-
-  while( LPC_CAN->IF1_CMDREQ & IFCREQ_BUSY ) {
-	  ;
-  }/* Could spin here forever */
-#endif
-  return;
-}
-
-#endif
-
-/* Our own CAN_Send */
 void CAN_Send(uint16_t Pri, can_msg *msg) {
 	uint32_t tx_addr = 0x1FFFFFFF & msg->id;
 	uint8_t length = 8;
@@ -900,21 +489,6 @@ void CAN_Send(uint16_t Pri, can_msg *msg) {
 	}
 }
 
-	//*filteraddr format: SCANDAL_AddrGen(Priority,MsgType,NodeAddress,Channel/NodeType);
-  //		Priority ranges from 0 to 7 with lower numbers representing a greater priority message
-	//		MsgType differentiates between Channel messages, Config, Heartbeat, Error and reset messages
-	//		NodeAddress is the address of the CAN node you're interested in
-	//		Channel/NodeType is the channel the node is sending messages for channel messages
-	//				for heartbeats, it represents the NodeType, as defined in scandal_devices.h
-
-#if 0
-uint32_t SCANDAL_AddrGen(uint16_t Pri, uint16_t MsgType, uint16_t NodAddr, uint16_t Chnl_NodTyp){
-
-	return (Pri << 26) | ( MsgType << 18) | (NodAddr << 10) | Chnl_NodTyp;
-	//(Ext << 30) | Will be re-written such that this isn't required
-}
-#endif
-
 //Returns true of the buffer is BUSY so move on to the next buffer
 uint8_t BufferCheck(uint8_t ToCheck){
 	uint32_t BufferStatus;
@@ -924,5 +498,4 @@ uint8_t BufferCheck(uint8_t ToCheck){
 	uint8_t ret = (((uint8_t) (BufferStatus >> (ToCheck -1))) & 0x01);
 
 	return ret;
-
 }

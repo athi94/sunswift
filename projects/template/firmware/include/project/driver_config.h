@@ -10,7 +10,7 @@
 
 #include <cmsis/LPC11xx.h>
 
-#define CAN_UART_DEBUG
+#undef CAN_UART_DEBUG
 
 #define CONFIG_ENABLE_DRIVER_CRP						1
 #define CONFIG_CRP_SETTING_NO_CRP						1
