@@ -37,6 +37,10 @@ void setup_ports(void) {
 	GPIOSetDir(2,7,1); //Yel LED, Out
 }
 
+void in_channel_0_handler(int32_t value, uint32_t src_time) {
+	UART_printf("in_channel_0_handler got called with value %d time at source %d\n\r", value, src_time);
+}
+
 int main(void)
 {
 	int i = 0; /* Used in main loop */
@@ -60,6 +64,8 @@ int main(void)
 	UART_printf("Welcome to the template project! This is coming out over UART1\n\r");
 	UART_printf("The 2 debug LEDs should blink at a rate of 1HZ\n\r");
 	UART_printf("If you configure the in channel 0, I should print a message upon receipt of such a channel message\n\r");
+
+	scandal_register_in_channel_handler(0, &in_channel_0_handler);
 
 	/* This is the main loop, go for ever! */
 	while (1) {
@@ -91,7 +97,7 @@ int main(void)
 
 			value = scandal_get_in_channel_value(TEMPLATE_TEST_IN);
 
-			UART_printf("Yay, I received a channel message on in_channel 0, the value was: %d\n\r", value);
+			UART_printf("I received a channel message in the main loop on in_channel 0, value  %d at time %d\n\r", value, scandal_get_in_channel_rcvd_time(TEMPLATE_TEST_IN));
 
 			if(scandal_get_in_channel_value(TEMPLATE_TEST_IN) == 1) {
 				toggle_red_led();

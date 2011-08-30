@@ -37,7 +37,9 @@
 #include <project/scandal_config.h>
 #include <project/driver_config.h>
 
-in_channel      in_channels[NUM_IN_CHANNELS];
+in_channel           in_channels[NUM_IN_CHANNELS];
+in_channel_handler   in_channel_handlers[NUM_IN_CHANNELS];
+
 scandal_config  my_config;
 volatile u32    heartbeat_timer;
 uint64_t        timesync_offset; 
@@ -84,6 +86,7 @@ u08 scandal_init(void){
 		in_channels[i].value = 0;
 		in_channels[i].rcvd_time = 0;
 		in_channels[i].time = 0;
+		in_channel_handlers[i] = NULL;
 		/* Register the ID */
 		u32 id = scandal_mk_channel_id(0, my_config.ins[i].source_node,
 								my_config.ins[i].source_num);
@@ -140,6 +143,9 @@ void scandal_set_b(u16 chan_num, s32 value)
 	sc_write_conf(&my_config); 
 }
 
+void scandal_register_in_channel_handler(int chan_num, in_channel_handler handler) {
+	in_channel_handlers[chan_num] = handler;
+}
 
 s32 scandal_get_in_channel_value(u16 chan_num){
 	return(in_channels[chan_num].value);
@@ -278,7 +284,8 @@ u08	scandal_handle_channel(can_msg* msg){
 	u08	node;
 	u16	num;
 
-	u32 	value,time;
+	int32_t  value;
+	uint32_t time;
 
 	node 	= (msg->id >> CHANNEL_SOURCE_ADDR_OFFSET) & 0xFF;
 	num	= (msg->id >> CHANNEL_NUM_OFFSET) & 0x03FF;
@@ -308,6 +315,12 @@ u08	scandal_handle_channel(can_msg* msg){
 			in_channels[i].value = value;
 			in_channels[i].time = time;
 			in_channels[i].rcvd_time = sc_get_timer();
+
+			if (in_channel_handlers[i] != NULL) {
+				in_channel_handler handler = in_channel_handlers[i];
+				handler(value, time);
+			}
+
 		}
 	}
 

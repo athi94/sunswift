@@ -212,33 +212,37 @@ Heartbeat consists of the following:
 }sc_channel_id; */
 
 typedef u32 sc_channel_id;
-typedef struct channel_data{
+typedef struct channel_data {
 	u32 value;
  	u32 time;
-}sc_channel_data;
+} sc_channel_data;
 
-typedef struct channel_frame{
+typedef struct channel_frame {
 	sc_channel_id id;
 	sc_channel_data data;
 	u32 length;
-}sc_channel_frame;
+} sc_channel_frame;
 
 /* Function Prototypes */
 u08 			scandal_init(void);
 s32 			scandal_get_m(u16 chan_num);
 s32 			scandal_get_b(u16 chan_num);
-void                    scandal_set_m(u16 chan_num, s32 value);
-void                    scandal_set_b(u16 chan_num, s32 value);
+void			scandal_set_m(u16 chan_num, s32 value);
+void			scandal_set_b(u16 chan_num, s32 value);
 
 s32 			scandal_get_in_channel_value(u16 chan_num);
 sc_time_t 		scandal_get_in_channel_time(u16 chan_num);
 sc_time_t 		scandal_get_in_channel_rcvd_time(u16 chan_num);
 u08 			scandal_in_channel_is_valid(u16 chan_num);
-in_channel* 	        scandal_get_in_channel(u16 chan_num);
+in_channel*		scandal_get_in_channel(u16 chan_num);
+
+typedef			void (*in_channel_handler)(int32_t value, uint32_t src_time);
+void			scandal_register_in_channel_handler(int chan_num, in_channel_handler handler);
 
 u08 			scandal_get_addr(void);
 u32 			scandal_get_mac(void);
 u32 			scandal_get_time(void);
 
 void 			handle_scandal(void);
+
 #endif
