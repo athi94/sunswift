@@ -3,3 +3,12 @@ syntax: glob
 *Preview
 *htm
 *History
+.DS_Store
+*.o
+*.bin
+*.axf
+*.elf
+*.map
+*.swp
+*.orig
+*/Project Outputs*
