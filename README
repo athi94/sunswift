@@ -1,0 +1,19 @@
+This is the default sunswift Google Code mercurial repository.
+
+Be warned: this repository contains many project subrepositories, which
+themselves contain subrepositories of common stuff, such as libaltium and
+scandal.
+
+Cloning this main repository will clone each of the subrepositories and
+their children as well. Hence you will get many copies of scandal and
+libaltium inside the project directories. You may or may not want this.
+
+Cloning this top-level repository is only usually done by people who are
+maintaining the repositories and who know how mercurial subrepositories
+work. It can be confusing. Be careful.
+
+If you are just looking around, I suggest that you clone an individual project
+subrepository.
+
+If you have any questions, please send email to:
+	Etienne Le Sueur <elesueur@cse.unsw.edu.au>
